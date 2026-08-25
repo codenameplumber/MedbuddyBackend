@@ -1,0 +1,158 @@
+/* ═══════════════════════════════════════════════════════════════════
+   App shells — clinic sidebar console, patient phone frame.
+   Rendered by js/shared/shell.js from body data attributes.
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Clinic: sidebar ─────────────────────────────────────────────── */
+body[data-app="clinic"] { display: flex; min-height: 100dvh; background: var(--paper); }
+
+.sidebar {
+  width: 258px; flex: none;
+  position: sticky; top: 0; align-self: flex-start;
+  height: 100dvh;
+  display: flex; flex-direction: column;
+  background: var(--card);
+  border-right: 1px solid var(--rule);
+  overflow-y: auto;
+  z-index: 40;
+}
+
+.side-brand {
+  display: flex; align-items: center; gap: var(--s3);
+  padding: var(--s4) var(--s4);
+  border-bottom: 1px solid var(--rule);
+  text-decoration: none; color: inherit;
+}
+.side-brand .brand-name { display: block; font-size: var(--step-0); font-weight: 700; letter-spacing: -.015em; }
+.side-brand-sub { display: block; font-size: var(--step-s); color: var(--accent); font-weight: 600; }
+.side-brand .brand-mark {
+  width: 30px; height: 30px; flex: none; border-radius: 8px;
+  background: var(--accent); position: relative;
+}
+.side-brand .brand-mark::after {
+  content: ""; position: absolute; inset: 8px 6px auto 6px; height: 2.5px;
+  border-radius: 2px; background: var(--accent-ink);
+  box-shadow: 0 6px 0 var(--accent-ink), 0 12px 0 color-mix(in srgb, var(--accent-ink) 55%, transparent);
+}
+
+.side-nav { flex: 1; padding: var(--s3) var(--s2); }
+.nav-group + .nav-group { margin-top: var(--s4); }
+.nav-label {
+  font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--ink-3); padding: var(--s2) var(--s3);
+}
+
+.nav-item {
+  display: flex; align-items: center; gap: var(--s3);
+  padding: 9px var(--s3);
+  border-radius: var(--radius-s);
+  color: var(--ink-2); text-decoration: none;
+  font-weight: 600; font-size: var(--step-0);
+  transition: background var(--motion), color var(--motion);
+}
+.nav-item:hover { background: var(--paper-2); color: var(--ink); }
+.nav-item.is-active { background: var(--accent); color: var(--accent-ink); }
+.nav-item.is-active .nav-count { background: rgba(255,255,255,.22); color: inherit; }
+
+/* Pinned explicitly rather than relying on the .i-sm utility — a sidebar
+   icon that inherits the wrong size is immediately obvious, and this is
+   the one place it must not happen. */
+.nav-item .i { width: 17px; height: 17px; vertical-align: middle; }
+
+.nav-count {
+  font-size: 11px; font-weight: 700; font-family: var(--font-mono);
+  padding: 2px 7px; border-radius: 999px;
+  background: var(--neutral-bg); color: var(--ink-2);
+}
+.nav-count.is-hot { background: var(--alert-bg); color: var(--alert); }
+
+.side-foot { padding: var(--s2); border-top: 1px solid var(--rule); }
+
+.appwrap { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+
+.apptop {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; align-items: center; gap: var(--s4);
+  padding: var(--s4) var(--s6);
+  background: color-mix(in srgb, var(--paper) 90%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--rule);
+}
+.apptop-title { font-size: var(--step-2); line-height: 1.15; letter-spacing: -.02em; font-weight: 700; }
+.apptop-sub { color: var(--ink-2); font-size: var(--step-s); margin-top: 2px; }
+.side-toggle { display: none; }
+
+body[data-app="clinic"] .main { flex: 1; padding: var(--s6); max-width: 1400px; width: 100%; }
+
+.app-foot {
+  display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap;
+  padding: var(--s4) var(--s6);
+  border-top: 1px solid var(--rule);
+  color: var(--ink-3); font-size: var(--step-s);
+}
+.app-foot a { color: var(--ink-2); }
+.app-foot .sep { opacity: .5; }
+.foot-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--safe); }
+
+@media (max-width: 1000px) {
+  .sidebar {
+    position: fixed; inset: 0 auto 0 0;
+    transform: translateX(-100%); transition: transform var(--motion);
+    box-shadow: var(--e3);
+  }
+  .sidebar.is-open { transform: none; }
+  .side-toggle { display: grid; place-items: center; }
+  .apptop, body[data-app="clinic"] .main, .app-foot { padding-inline: var(--s4); }
+}
+
+/* ── Patient: phone frame ────────────────────────────────────────── */
+body[data-app="patient"] {
+  background: var(--paper);
+  max-width: 560px; margin-inline: auto;
+  min-height: 100dvh;
+  padding-bottom: calc(var(--bar-h) + env(safe-area-inset-bottom));
+}
+
+.phone-head {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; align-items: center; gap: var(--s3);
+  padding: calc(var(--s4) + env(safe-area-inset-top)) var(--s4) var(--s4);
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--rule);
+}
+.phone-head .brand-mark {
+  width: 34px; height: 34px; flex: none; border-radius: 9px;
+  background: var(--caution); position: relative;
+}
+.phone-head .brand-mark::after {
+  content: ""; position: absolute; inset: 9px 7px auto 7px; height: 3px;
+  border-radius: 2px; background: #fff;
+  box-shadow: 0 6px 0 rgba(255,255,255,.9), 0 12px 0 rgba(255,255,255,.55);
+}
+.phone-title { font-family: var(--font-name); font-size: var(--step-2); line-height: 1.15; letter-spacing: -.02em; }
+.phone-sub { color: var(--ink-2); font-size: var(--step-s); }
+
+body[data-app="patient"] .sos {
+  position: static; flex: none;
+  min-width: auto; width: auto; height: 44px; padding: 0 var(--s4);
+  display: grid; place-items: center;
+  text-decoration: none; font-size: var(--step-s);
+}
+
+.phone-body { padding: var(--s5) var(--s4) var(--s6); }
+
+.action-bar {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(var(--bar-h) + env(safe-area-inset-bottom));
+  width: min(560px, 100%);
+  padding: var(--s3) var(--s4);
+  background: color-mix(in srgb, var(--card) 94%, transparent);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--rule);
+  z-index: 25;
+}
+
+body[data-app="patient"] .tabbar { max-width: 560px; margin-inline: auto; }
+body[data-app="patient"] .tab { text-decoration: none; }
+body[data-app="patient"] .tab-icon svg { width: 23px; height: 23px; }

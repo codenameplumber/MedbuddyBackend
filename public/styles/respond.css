@@ -1,0 +1,142 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Reminder response page.
+
+   Bigger than anything else in the system on purpose. This is opened
+   one-handed, possibly outdoors, possibly by someone who has left their
+   glasses inside, and every target has to be hittable first time.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.rp {
+  min-height: 100dvh;
+  max-width: 540px;
+  margin-inline: auto;
+  padding: var(--s5) var(--s4) var(--s7);
+  display: flex; flex-direction: column; gap: var(--s5);
+}
+
+.rp-head { display: flex; flex-direction: column; gap: var(--s3); }
+.rp-brand {
+  display: flex; align-items: center; gap: var(--s2);
+  font-weight: 700; letter-spacing: -.01em; color: var(--ink-2);
+}
+.rp-brand .brand-mark {
+  width: 26px; height: 26px; flex: none; border-radius: 7px;
+  background: var(--caution); position: relative;
+}
+.rp-brand .brand-mark::after {
+  content: ""; position: absolute; inset: 7px 5px auto 5px; height: 2.5px;
+  border-radius: 2px; background: #fff;
+  box-shadow: 0 5px 0 rgba(255,255,255,.9), 0 10px 0 rgba(255,255,255,.55);
+}
+.rp-greet { font-size: var(--step-1); color: var(--ink-2); }
+
+.rp-body { flex: 1; display: flex; flex-direction: column; }
+
+.rp-q {
+  font-family: var(--font-name);
+  font-size: clamp(1.7rem, 6.5vw, 2.3rem);
+  line-height: 1.18; letter-spacing: -.02em;
+}
+.rp-sub { color: var(--ink-2); margin-top: var(--s3); font-size: var(--step-1); }
+
+/* ── Step 1: the two big answers ─────────────────────────────────── */
+.rp-choices { display: grid; gap: var(--s4); margin-top: var(--s6); }
+
+.rp-choice {
+  display: flex; align-items: center; gap: var(--s4);
+  min-height: 104px;                       /* deliberately huge */
+  padding: var(--s4) var(--s5);
+  border-radius: var(--radius-l);
+  border: 2px solid var(--rule-2);
+  background: var(--card);
+  font-size: var(--step-2); font-weight: 650;
+  text-align: left; cursor: pointer;
+  transition: transform var(--motion), border-color var(--motion), background var(--motion);
+}
+.rp-choice:active { transform: scale(.985); }
+.rp-choice-glyph {
+  width: 56px; height: 56px; flex: none;
+  border-radius: 50%; display: grid; place-items: center;
+  background: var(--paper-2); color: var(--ink-2);
+}
+.rp-choice-glyph svg { width: 30px; height: 30px; }
+
+.rp-yes { border-color: var(--safe-line); }
+.rp-yes:hover { background: var(--safe-bg); border-color: var(--safe); }
+.rp-yes .rp-choice-glyph { background: var(--safe); color: #fff; }
+
+.rp-no:hover { background: var(--paper-2); border-color: var(--ink-3); }
+
+/* ── Step 2: symptom picker ──────────────────────────────────────── */
+.sym-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: var(--s3); margin-top: var(--s5);
+}
+@media (max-width: 380px) { .sym-grid { grid-template-columns: repeat(2, 1fr); } }
+
+.sym {
+  display: flex; flex-direction: column; align-items: center; gap: var(--s2);
+  padding: var(--s4) var(--s2);
+  border-radius: var(--radius);
+  border: 2px solid var(--rule);
+  background: var(--card);
+  cursor: pointer; min-height: 118px;
+  transition: border-color var(--motion), background var(--motion), transform var(--motion);
+}
+.sym:active { transform: scale(.97); }
+.sym-glyph { font-size: 40px; line-height: 1; }
+.sym-label { font-size: var(--step-s); font-weight: 600; text-align: center; color: var(--ink-2); line-height: 1.25; }
+.sym[aria-pressed="true"] { border-color: var(--caution); background: var(--caution-bg); }
+.sym[aria-pressed="true"] .sym-label { color: var(--ink); }
+
+.rp-sev { margin-top: var(--s6); }
+.sev-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--s2); margin-top: var(--s3); }
+.sev {
+  min-height: var(--tap); padding: 0 var(--s2);
+  border-radius: var(--radius); border: 2px solid var(--rule);
+  background: var(--card); font-weight: 650; cursor: pointer;
+  font-size: var(--step-s);
+}
+.sev[aria-pressed="true"] { border-color: var(--alert); background: var(--alert-bg); color: var(--alert); }
+
+/* ── Step 3: voice note ──────────────────────────────────────────── */
+.rec-wrap { display: flex; flex-direction: column; align-items: center; gap: var(--s3); margin: var(--s6) 0; }
+
+.rec {
+  width: 128px; height: 128px; border-radius: 50%;
+  border: 3px solid var(--rule-2); background: var(--card);
+  color: var(--ink-2); cursor: pointer;
+  display: grid; place-items: center;
+  touch-action: none;                       /* hold-to-record must not scroll */
+  transition: transform var(--motion), background var(--motion), border-color var(--motion);
+}
+.rec svg { width: 46px; height: 46px; }
+.rec:active { transform: scale(.96); }
+.rec.is-recording {
+  background: var(--alert); border-color: var(--alert); color: #fff;
+  animation: pulse 1.3s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(185,28,28,.45); }
+  50%      { box-shadow: 0 0 0 18px rgba(185,28,28,0); }
+}
+.rec-play { width: 100%; margin-top: var(--s2); }
+
+/* ── Done ────────────────────────────────────────────────────────── */
+.rp-done { align-items: center; text-align: center; padding-top: var(--s7); }
+.rp-tick {
+  width: 88px; height: 88px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--safe); color: #fff;
+  margin-bottom: var(--s5);
+}
+.rp-tick svg { width: 46px; height: 46px; stroke-width: 2.5; }
+.rp-tick-warn { background: var(--caution); }
+.rp-done .btn { max-width: 360px; }
+
+/* ── Footer ──────────────────────────────────────────────────────── */
+.rp-foot {
+  display: flex; align-items: center; justify-content: center; gap: var(--s2);
+  color: var(--ink-3); font-size: var(--step-s);
+  padding-top: var(--s4); border-top: 1px solid var(--rule);
+}

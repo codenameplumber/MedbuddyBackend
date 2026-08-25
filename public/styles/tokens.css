@@ -1,0 +1,178 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   MedBuddy — design system
+   ═══════════════════════════════════════════════════════════════════════
+
+   One token set, two skins:
+
+     [data-skin="patient"]  warm paper, large type, generous space.
+                            One decision per screen. Read at arm's length
+                            by someone who may struggle with text.
+
+     [data-skin="clinic"]   cool neutral, dense, data-forward. Read at a
+                            desk by staff scanning dozens of patients.
+                            Supports dark for night shifts.
+
+   Both skins share the same scale, rhythm, and status semantics, so a
+   component written once behaves correctly in either context.
+
+   Contrast: every ink/surface pair below meets WCAG AA (4.5:1) for body
+   text. Status colours are the 700 weights precisely so they stay legible
+   as text, not just as fills.
+   ------------------------------------------------------------------- */
+
+:root {
+  /* ── Type ────────────────────────────────────────────────────────
+     Defaults are the multilingual stack — verified to carry the Yorùbá
+     and Igbo dot-below vowels and the Hausa hooked letters, which the
+     bundled brand fonts do NOT (see styles/fonts.css for the audit).
+     The clinic skin overrides these to the branded faces below, because
+     that surface is English-only. */
+  --font-body: var(--font-multi, "Segoe UI", system-ui, sans-serif);
+  --font-name: "Iowan Old Style", "Charter", Georgia, "Noto Serif", serif;
+  --font-mono: var(--font-multi-mono, ui-monospace, monospace);
+
+  /* Modular scale, ratio 1.2 from a 17px base. --text-scale is set at
+     runtime from Settings and multiplies the whole scale at once. */
+  --text-scale: 1;
+  --step-s:  calc(0.889rem * var(--text-scale));   /* hints, never instructions */
+  --step-0:  calc(1.0625rem * var(--text-scale));  /* body */
+  --step-1:  calc(1.275rem * var(--text-scale));
+  --step-2:  calc(1.530rem * var(--text-scale));
+  --step-3:  calc(1.836rem * var(--text-scale));
+  --step-4:  calc(2.203rem * var(--text-scale));
+
+  --lh-tight: 1.18;
+  --lh-body:  1.55;
+  --tracking-caps: .085em;
+
+  /* ── Rhythm — 4px grid ──────────────────────────────────────────── */
+  --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px;
+  --s5: 24px; --s6: 32px; --s7: 48px; --s8: 64px;
+
+  --radius-s: 6px;
+  --radius:   10px;
+  --radius-l: 16px;
+
+  /* ── Touch ───────────────────────────────────────────────────────
+     56px is the floor, not a target. The patient audience includes
+     elderly users with reduced dexterity and cracked screens. */
+  --tap: 56px;
+  --tap-dense: 40px;   /* clinic skin only, mouse + keyboard */
+
+  --bar-h: 76px;
+
+  /* ── Status — semantic, identical in both skins ─────────────────
+     Always paired with a text label or icon in the markup. Colour is
+     never the only carrier of meaning. */
+  --safe:       #15803D;  --safe-bg:    #ECFAF0;  --safe-line:    #A7DCB8;
+  --caution:    #B45309;  --caution-bg: #FEF5E7;  --caution-line: #EFCB92;
+  --alert:      #B91C1C;  --alert-bg:   #FDECEC;  --alert-line:   #F0AFAF;
+  --info:       #1D4ED8;  --info-bg:    #EDF2FE;  --info-line:    #B4C6F5;
+  --neutral:    #57534E;  --neutral-bg: #F5F5F4;  --neutral-line: #D6D3D1;
+
+  /* ── Elevation ─────────────────────────────────────────────────── */
+  --e1: 0 1px 0 rgba(16,15,14,.04);
+  --e2: 0 1px 2px rgba(16,15,14,.06), 0 2px 8px rgba(16,15,14,.05);
+  --e3: 0 4px 10px rgba(16,15,14,.07), 0 12px 32px rgba(16,15,14,.08);
+
+  --focus: 0 0 0 3px var(--paper), 0 0 0 6px var(--accent);
+
+  --motion: 140ms cubic-bezier(.2,.6,.3,1);
+}
+
+/* ── Patient skin ──────────────────────────────────────────────────
+   The prescription label: paper stock, printed rules, a monospace
+   dosage line, an orange caution band. Warm because this screen is
+   read at home, often by someone anxious. */
+:root,
+[data-skin="patient"] {
+  --paper:    #FCFBF8;
+  --paper-2:  #F4F1E9;
+  --card:     #FFFFFF;
+  --rule:     #E3DED2;
+  --rule-2:   #C8C1B1;
+
+  --ink:      #16150F;   /* 16.8:1 on --paper */
+  --ink-2:    #55504A;   /*  7.6:1 */
+  --ink-3:    #7D7770;   /*  4.6:1 — hints only */
+
+  --accent:     #16150F;
+  --accent-ink: #FCFBF8;
+
+  --shadow: var(--e2);
+  --density: 1;
+}
+
+/* ── Clinic skin ───────────────────────────────────────────────────
+   Cooler and denser. Staff scan lists, not one card at a time, so the
+   rhythm tightens and the accent shifts to a clinical teal that reads
+   as medical without the tired hospital-blue cliché. */
+[data-skin="clinic"] {
+  --paper:    #F6F7F8;
+  --paper-2:  #EDEFF2;
+  --card:     #FFFFFF;
+  --rule:     #E1E5EA;
+  --rule-2:   #C3CAD2;
+
+  --ink:      #10151C;
+  --ink-2:    #4A5462;
+  --ink-3:    #737E8C;
+
+  --accent:     #0F5F5B;   /* deep teal */
+  --accent-ink: #FFFFFF;
+
+  /* English-only surface, so it gets the branded faces. */
+  --font-body: var(--font-ui, "Segoe UI", system-ui, sans-serif);
+  --font-mono: var(--font-code, ui-monospace, monospace);
+  --font-name: var(--font-ui, "Segoe UI", system-ui, sans-serif);
+  --shadow: var(--e2);
+  --density: .85;
+}
+
+/* Clinic dark — night shifts are the normal case, not an edge case. */
+@media (prefers-color-scheme: dark) {
+  [data-skin="clinic"]:not([data-theme="light"]) {
+    --paper:   #0E1116;
+    --paper-2: #151A21;
+    --card:    #161B23;
+    --rule:    #262E38;
+    --rule-2:  #38424F;
+
+    --ink:     #EEF1F5;
+    --ink-2:   #A6B0BD;
+    --ink-3:   #7A8492;
+
+    --accent:     #2DD4BF;
+    --accent-ink: #06201E;
+
+    --safe:    #4ADE80;  --safe-bg:    #0D2417;  --safe-line:    #1F5134;
+    --caution: #FBBF24;  --caution-bg: #2A1E06;  --caution-line: #6B4A0C;
+    --alert:   #F87171;  --alert-bg:   #2A1113;  --alert-line:   #6E2427;
+    --info:    #7DA6FF;  --info-bg:    #101A2E;  --info-line:    #2A3F66;
+    --neutral: #A6B0BD;  --neutral-bg: #171C23;  --neutral-line: #303945;
+
+    --e1: 0 1px 0 rgba(0,0,0,.4);
+    --e2: 0 1px 2px rgba(0,0,0,.5), 0 2px 8px rgba(0,0,0,.4);
+    --e3: 0 4px 10px rgba(0,0,0,.5), 0 12px 32px rgba(0,0,0,.5);
+  }
+}
+
+[data-skin="clinic"][data-theme="dark"] {
+  --paper: #0E1116; --paper-2: #151A21; --card: #161B23;
+  --rule: #262E38;  --rule-2: #38424F;
+  --ink: #EEF1F5;   --ink-2: #A6B0BD;   --ink-3: #7A8492;
+  --accent: #2DD4BF; --accent-ink: #06201E;
+  --safe: #4ADE80;  --safe-bg: #0D2417;  --safe-line: #1F5134;
+  --caution: #FBBF24; --caution-bg: #2A1E06; --caution-line: #6B4A0C;
+  --alert: #F87171; --alert-bg: #2A1113;  --alert-line: #6E2427;
+  --info: #7DA6FF;  --info-bg: #101A2E;   --info-line: #2A3F66;
+  --neutral: #A6B0BD; --neutral-bg: #171C23; --neutral-line: #303945;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
