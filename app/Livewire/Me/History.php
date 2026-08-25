@@ -32,6 +32,6 @@ class History extends Component
             'rate7'  => $adherence->rate($me, 7),
             'rate30' => $adherence->rate($me, 30),
             'reports' => $me->reports()->latest()->limit(10)->get(),
-        ])->title(__('me.nav.today').' — 30');
+        ])->title(__('me.history.title'));
     }
 }

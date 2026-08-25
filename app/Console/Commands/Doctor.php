@@ -119,6 +119,50 @@ class Doctor extends Command
             $problems++;
         }
 
+        // ── Language coverage ────────────────────────────────────────
+        //
+        // Laravel falls back to English for a missing key, which is the right
+        // runtime behaviour and a terrible reporting one: the app looks
+        // finished while half of it speaks the wrong language to the person
+        // least able to cope with that.
+        $this->line("\n<fg=cyan>LANGUAGE COVERAGE</>");
+
+        $flat = function (array $items, string $prefix = '') use (&$flat) {
+            $out = [];
+            foreach ($items as $k => $v) {
+                $key = $prefix ? "$prefix.$k" : $k;
+                if (is_array($v)) {
+                    $out += $flat($v, $key);
+                } else {
+                    $out[$key] = $v;
+                }
+            }
+
+            return $out;
+        };
+
+        $worst = 0;
+        foreach (['me', 'respond', 'reminder'] as $file) {
+            $en = $flat(require lang_path("en/{$file}.php"));
+            foreach (array_keys(config('medbuddy.languages')) as $lang) {
+                if ($lang === 'en') {
+                    continue;
+                }
+                $path = lang_path("{$lang}/{$file}.php");
+                $have = is_file($path) ? $flat(require $path) : [];
+                $worst = max($worst, count(array_diff_key($en, $have)));
+            }
+        }
+
+        $this->kv('Languages', implode(', ', config('medbuddy.languages')));
+        $this->kv('Strings falling back to English', $worst.' (worst language)');
+
+        if ($worst > 0) {
+            $this->warnLine("{$worst} strings render in English to someone who chose not to read English.");
+            $this->line('   List them: <fg=yellow>php artisan medbuddy:i18n --missing=yo</>');
+            $problems++;
+        }
+
         // ── Orphan reminders ─────────────────────────────────────────
         $this->line("\n<fg=cyan>DATA INTEGRITY</>");
         $orphans = 0;

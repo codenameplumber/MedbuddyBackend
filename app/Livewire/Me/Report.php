@@ -87,6 +87,6 @@ class Report extends Component
             'options'  => config('medbuddy.symptoms'),
             'guidance' => $this->crisis ? $triage->guidance($this->crisis) : null,
             'number'   => $this->me()->organisation?->emergency_number ?? '112',
-        ])->title(__('me.common.speak'));
+        ])->title(__('me.report.title'));
     }
 }

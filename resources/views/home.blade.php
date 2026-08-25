@@ -294,6 +294,10 @@
         has no glyphs for the Hausa hooked letters at all. So the branded faces are used only on
         English surfaces, and the patient app runs a verified system stack instead. Correctness
         beat branding.
+        <div style="margin-top:var(--s3)">
+          <a class="btn btn-secondary btn-sm" href="{{ route('deck.technical') }}#fonts">Read the audit</a>
+          <a class="btn btn-secondary btn-sm" href="/tools/diacritics.html">Run the diacritic check</a>
+        </div>
       </div>
     </div>
   </div>
@@ -308,6 +312,9 @@
     <a href="{{ route('me.login') }}">Patient app</a>
     <a href="{{ route('login') }}">Clinic console</a>
     <a href="{{ route('register') }}">Create an account</a>
+    <a href="{{ route('deck.pitch') }}">Pitch deck</a>
+    <a href="{{ route('deck.technical') }}">Technical deck</a>
+    <a href="/tools/diacritics.html">Diacritic check</a>
     <span>AI: <strong>{{ config('services.anthropic.mode') }}</strong></span>
     <span>&copy; {{ date('Y') }}</span>
   </div>

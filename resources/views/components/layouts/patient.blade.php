@@ -33,6 +33,11 @@
 <meta name="theme-color" content="#FCFBF8">
 <meta name="robots" content="noindex, nofollow">
 <title>{{ $title ?? 'MedBuddy' }} — MedBuddy</title>
+{{-- Installable to a home screen, the way the prototype was. --}}
+<link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
+<link rel="apple-touch-icon" href="{{ asset('favicon.ico') }}">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="MedBuddy">
 <link rel="stylesheet" href="{{ asset('styles/fonts.css') }}">
 <link rel="stylesheet" href="{{ asset('styles/tokens.css') }}">
 <link rel="stylesheet" href="{{ asset('styles/app.css') }}">
@@ -76,6 +81,36 @@
 
 @livewireScripts
 <script src="{{ asset('js/recorder.js') }}" defer></script>
+<script>
+// Service worker. Registered from the patient shell only — the clinic console
+// is a desk tool and has nothing to gain from a cache it could read stale
+// patient data out of.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register(@json(asset('sw.js')), { scope: '/' })
+      .catch(function (err) { console.warn('[sw] registration failed', err); });
+  });
+}
+
+// A visible, honest connection state. Ticking off a dose still needs a
+// connection, so saying so beats letting a tap fail silently.
+(function () {
+  var bar;
+  function show() {
+    if (bar) return;
+    bar = document.createElement('div');
+    bar.className = 'toast toast-caution is-in';
+    bar.setAttribute('role', 'status');
+    bar.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--bar-h) + 12px);z-index:60';
+    bar.textContent = 'No connection — your doses will not save until it is back.';
+    document.body.appendChild(bar);
+  }
+  function hide() { if (bar) { bar.remove(); bar = null; } }
+  window.addEventListener('offline', show);
+  window.addEventListener('online', hide);
+  if (!navigator.onLine) show();
+})();
+</script>
 <script>
 // Text size. Someone holding a phone at arm's length in bright sun is the
 // actual reading condition, so this is a first-class control, not a setting.

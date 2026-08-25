@@ -1,0 +1,26 @@
+{
+  "name": "MedBuddy",
+  "short_name": "MedBuddy",
+  "description": "Understand your medicines and never miss a dose.",
+  "start_url": "/me",
+  "scope": "/me",
+  "id": "/me",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FCFBF8",
+  "theme_color": "#FCFBF8",
+  "lang": "en",
+  "shortcuts": [
+    { "name": "Today's doses", "url": "/me" },
+    { "name": "Ask a question", "url": "/me/ask" },
+    { "name": "Emergency help", "url": "/me/emergency" }
+  ],
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='34' fill='%23FCFBF8'/%3E%3Crect x='24' y='40' width='144' height='112' rx='10' fill='%23fff' stroke='%23E3DED2' stroke-width='4'/%3E%3Crect x='24' y='40' width='144' height='26' rx='10' fill='%23B45309'/%3E%3Crect x='44' y='88' width='104' height='9' rx='4' fill='%2316150F'/%3E%3Crect x='44' y='108' width='72' height='9' rx='4' fill='%2355504A'/%3E%3Crect x='44' y='128' width='50' height='9' rx='4' fill='%237D7770'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

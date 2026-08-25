@@ -11,6 +11,21 @@ php artisan queue:work            # required — reminders are queued
 php artisan schedule:work         # dev equivalent of the cron entry
 ```
 
+### Every public surface
+
+| URL | What |
+|---|---|
+| `/` | Front page, charts reading the live database |
+| `/register` | Sign-up — magic link for patients, organisation for clinics |
+| `/login` · `/me/login` | Clinic and patient sign-in |
+| `/pitch` · `/technical-deck` | The decks, charts rendered server-side from the real cohort |
+| `/tools/diacritics.html` | Verifies the yo/ig/ha characters render on the demo device |
+| `/offline` | What the installed app shows with no connection |
+
+The patient app is installable: open `/me` on a phone and add it to the home screen. It keeps
+its styles and fonts offline and falls back to `/offline` rather than the browser's error page.
+Ticking off a dose still needs a connection, and the app says so rather than failing silently.
+
 `/` is the public front page. Staff sign in at `/login`; patients get a magic link at
 `/me/login`. Both audiences can sign themselves up at `/register`.
 
@@ -141,16 +156,20 @@ plus a queue worker under supervisor. Shared hosting will not do; budget for a V
 ## Tests
 
 ```bash
-php artisan test          # 161 tests, 486 assertions
+php artisan test              # 181 tests, 546 assertions
 php artisan medbuddy:doctor   # what is wired, what is dormant, what will not fire
+php artisan medbuddy:i18n     # how much of the patient app exists in each language
 ```
 
 Needs a `medbuddy_test` database (`phpunit.xml` points at it).
 
 ## Known gaps — stated, not hidden
 
-- **Translations are a first pass.** Every `lang/{yo,ha,ig}` file needs a native speaker, and the
-  `TriageService` term lists need a clinician too. A missed term there is a missed emergency.
+- **61 of 158 interface strings have no yo/ha/ig** and fall back to English in front of someone
+  who chose not to read English. `php artisan medbuddy:i18n --missing=yo` prints the list. The
+  55 the prototype shipped are a first pass too — every `lang/{yo,ha,ig}` file needs a native
+  speaker, and the `TriageService` term lists need a clinician. A missed term is a missed
+  emergency.
 - **Email reaches caregivers better than patients.** The hardest-to-reach users need SMS. Email
   is the right *first* channel, not the right *only* channel.
 - **No speech-to-text for Yorùbá, Hausa or Igbo.** Voice notes in those languages are flagged for

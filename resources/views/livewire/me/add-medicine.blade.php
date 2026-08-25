@@ -61,9 +61,8 @@
     <div class="band band-info" style="border-radius:var(--radius)">
       <x-icon name="info" class="band-icon" />
       <div>
-        <span class="band-title">This one is yours, not the clinic's</span>
-        Anything you add here is marked as added by you. Your clinic can see it, but only they
-        can change a medicine they prescribed.
+        <span class="band-title">{{ __('me.meds.ownTitle') }}</span>
+        {{ __('me.meds.ownBody') }}
       </div>
     </div>
 

@@ -1,0 +1,285 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Pitch deck — 16:9 slides, print-ready.
+
+   Screen: slides stack vertically for scrolling review.
+   Print:  one slide per page, exact 297×167mm (16:9), no margins.
+   ═══════════════════════════════════════════════════════════════════ */
+
+@page { size: 297mm 167mm; margin: 0; }
+
+body.deck {
+  background: #23211d;
+  font-family: var(--font-ui);
+  margin: 0;
+  padding: 24px 0;
+}
+
+.slide {
+  width: 297mm;
+  height: 167mm;
+  margin: 0 auto 20px;
+  background: var(--paper);
+  color: var(--ink);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 15mm 18mm 13mm;
+  box-shadow: 0 10px 40px rgba(0,0,0,.45);
+  page-break-after: always;
+  break-after: page;
+}
+.slide:last-child { page-break-after: auto; break-after: auto; }
+
+/* Slide furniture */
+.s-num {
+  position: absolute; right: 12mm; bottom: 7mm;
+  font-family: var(--font-code); font-size: 10pt; color: var(--ink-3);
+}
+.s-brand {
+  position: absolute; left: 18mm; bottom: 7mm;
+  display: flex; align-items: center; gap: 7px;
+  font-size: 9pt; font-weight: 700; color: var(--ink-3);
+  letter-spacing: .04em;
+}
+.s-brand::before {
+  content: ""; width: 14px; height: 14px; border-radius: 4px;
+  background: var(--caution);
+}
+
+.s-eyebrow {
+  font-size: 10pt; font-weight: 800; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--caution);
+  margin-bottom: 5mm;
+}
+.s-title {
+  font-family: var(--font-display);
+  font-size: 30pt; line-height: 1.08; letter-spacing: -.028em;
+  font-weight: 700; margin-bottom: 4mm;
+}
+.s-title-sm { font-size: 23pt; }
+.s-lede { font-size: 13pt; line-height: 1.45; color: var(--ink-2); max-width: 82ch; }
+.s-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 5mm; }
+
+/* Cover */
+.slide-cover { background: linear-gradient(150deg, #1A1815 0%, #2B211A 52%, #4A2710 100%); color: #F7F3EA; justify-content: center; }
+.slide-cover .s-title { font-size: 44pt; color: #fff; }
+.slide-cover .s-lede { color: rgba(247,243,234,.8); font-size: 15pt; }
+.slide-cover .s-num, .slide-cover .s-brand { color: rgba(247,243,234,.55); }
+.cover-meta { display: flex; gap: 12mm; margin-top: 9mm; padding-top: 6mm; border-top: 1px solid rgba(255,255,255,.2); }
+.cover-meta div { font-size: 10pt; color: rgba(247,243,234,.62); }
+.cover-meta strong { display: block; font-size: 14pt; color: #fff; font-family: var(--font-code); margin-bottom: 2px; }
+
+/* Dark section divider */
+.slide-dark { background: #1A1815; color: #F7F3EA; justify-content: center; }
+.slide-dark .s-title { color: #fff; }
+.slide-dark .s-lede { color: rgba(247,243,234,.78); }
+.slide-dark .s-num, .slide-dark .s-brand { color: rgba(247,243,234,.5); }
+
+/* Grids */
+.s-cols { display: grid; gap: 6mm; flex: 1; min-height: 0; }
+.s-2 { grid-template-columns: 1fr 1fr; }
+.s-3 { grid-template-columns: repeat(3, 1fr); }
+.s-4 { grid-template-columns: repeat(4, 1fr); }
+.s-2a { grid-template-columns: 1.35fr 1fr; }
+.s-2b { grid-template-columns: 1fr 1.35fr; }
+
+.s-card {
+  background: var(--card); border: 1px solid var(--rule); border-radius: 8px;
+  padding: 6mm; display: flex; flex-direction: column; gap: 3mm;
+  min-height: 0;
+}
+.s-card h3 { font-size: 13pt; letter-spacing: -.01em; line-height: 1.2; }
+.s-card p { font-size: 10.5pt; line-height: 1.45; color: var(--ink-2); }
+.s-card-accent { border-left: 4px solid var(--caution); }
+.s-card-safe { border-left: 4px solid var(--safe); }
+.s-card-alert { border-left: 4px solid var(--alert); }
+.s-card-info { border-left: 4px solid var(--info); }
+
+.s-kicker {
+  font-size: 9pt; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+/* Stats */
+.s-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 6mm; }
+.s-stat strong {
+  display: block; font-family: var(--font-code); font-size: 26pt;
+  line-height: 1; letter-spacing: -.03em;
+}
+.s-stat span { display: block; font-size: 9.5pt; color: var(--ink-3); margin-top: 2mm; line-height: 1.35; }
+
+/* Lists */
+.s-list { list-style: none; display: flex; flex-direction: column; gap: 3mm; }
+.s-list li { display: flex; gap: 3mm; font-size: 11pt; line-height: 1.4; align-items: flex-start; }
+.s-list li::before {
+  content: ""; width: 6px; height: 6px; border-radius: 50%;
+  background: var(--caution); flex: none; margin-top: 6px;
+}
+.s-list-safe li::before { background: var(--safe); }
+.s-list-info li::before { background: var(--info); }
+.s-list-alert li::before { background: var(--alert); }
+
+/* Tables */
+.s-table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+.s-table th {
+  text-align: left; padding: 2.5mm 3mm; font-size: 8.5pt; font-weight: 800;
+  letter-spacing: .09em; text-transform: uppercase; color: var(--ink-3);
+  border-bottom: 1.5px solid var(--rule-2); background: var(--paper-2);
+}
+.s-table td { padding: 2.5mm 3mm; border-bottom: 1px solid var(--rule); vertical-align: top; line-height: 1.35; }
+.s-table tr:last-child td { border-bottom: 0; }
+.s-table .num { font-family: var(--font-code); text-align: right; }
+
+/* Code / terminal */
+.s-code {
+  font-family: var(--font-code); font-size: 9.5pt; line-height: 1.55;
+  background: #1A1815; color: #E8E2D6; border-radius: 7px; padding: 5mm;
+  white-space: pre; overflow: hidden;
+}
+.s-code .ok { color: #6EE7A8; }
+.s-code .no { color: #FCA5A5; }
+.s-code .dim { color: #8A8279; }
+.s-code .hi { color: #FBBF24; }
+
+/* Quote / callout */
+.s-quote {
+  font-family: var(--font-display); font-size: 17pt; line-height: 1.3;
+  letter-spacing: -.02em; border-left: 5px solid var(--caution);
+  padding-left: 6mm;
+}
+.s-note {
+  background: var(--paper-2); border: 1px dashed var(--rule-2);
+  border-radius: 7px; padding: 5mm; font-size: 10pt; line-height: 1.5;
+  color: var(--ink-2);
+}
+.s-note strong { color: var(--ink); }
+
+.s-band {
+  display: flex; gap: 4mm; padding: 4mm 5mm; border-radius: 7px;
+  border-left: 5px solid var(--caution); background: var(--caution-bg);
+  font-size: 10.5pt; line-height: 1.45;
+}
+.s-band-alert { border-left-color: var(--alert); background: var(--alert-bg); }
+.s-band-safe  { border-left-color: var(--safe);  background: var(--safe-bg); }
+.s-band-info  { border-left-color: var(--info);  background: var(--info-bg); }
+.s-band b { display: block; margin-bottom: 1mm; }
+
+/* Flow diagram */
+.s-flow { display: flex; align-items: stretch; gap: 0; }
+.s-flow-step {
+  flex: 1; background: var(--card); border: 1px solid var(--rule);
+  padding: 5mm; position: relative;
+}
+.s-flow-step:first-child { border-radius: 8px 0 0 8px; }
+.s-flow-step:last-child { border-radius: 0 8px 8px 0; }
+.s-flow-step + .s-flow-step { border-left: 0; }
+.s-flow-n {
+  font-family: var(--font-code); font-size: 9pt; font-weight: 700;
+  color: var(--caution); margin-bottom: 2mm;
+}
+.s-flow-step h4 { font-size: 11.5pt; margin-bottom: 2mm; line-height: 1.25; }
+.s-flow-step p { font-size: 9.5pt; color: var(--ink-2); line-height: 1.4; }
+
+/* Chart holders */
+.s-chart { background: var(--card); border: 1px solid var(--rule); border-radius: 8px; padding: 5mm; min-height: 0; display: flex; flex-direction: column; }
+.s-chart-t { font-size: 10pt; font-weight: 700; margin-bottom: 3mm; }
+.s-chart .ch { max-height: 42mm; }
+.s-chart .ch-donut { max-height: 38mm; }
+.s-chart .ch-legend { margin-top: 3mm; gap: 2mm 4mm; }
+.s-chart .ch-key { font-size: 8.5pt; }
+.s-chart .heat-box { height: 12mm; }
+.s-chart .heat-label { font-size: 7.5pt; }
+
+/* Device frames (scaled down for slides) */
+.d-phone { border: 7px solid #1b1a17; border-radius: 20px; background: #1b1a17; overflow: hidden; }
+.d-phone-in { background: var(--paper); border-radius: 14px; overflow: hidden; font-size: 8pt; }
+.d-row { display: flex; align-items: center; gap: 2mm; padding: 3mm; border-bottom: 1px solid var(--rule); }
+.d-mark { width: 16px; height: 16px; border-radius: 5px; background: var(--caution); flex: none; }
+.d-body { padding: 3mm; display: flex; flex-direction: column; gap: 2mm; }
+.d-card { background: var(--card); border: 1px solid var(--rule); border-radius: 6px; padding: 3mm; }
+.d-card.on { background: var(--safe-bg); border-color: var(--safe-line); }
+.d-sub { color: var(--ink-3); font-size: 7pt; }
+.d-tabs { display: flex; border-top: 1px solid var(--rule); }
+.d-tabs span { flex: 1; text-align: center; padding: 2.5mm 0; font-size: 6.5pt; font-weight: 700; color: var(--ink-3); }
+.d-tabs .on { color: var(--ink); box-shadow: inset 0 2px 0 var(--caution); }
+
+.mono { font-family: var(--font-code); }
+.hl { background: var(--caution-bg); padding: 0 3px; border-radius: 3px; }
+
+/* Screen-only toolbar */
+.deck-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(26,24,21,.94); backdrop-filter: blur(10px);
+  color: #F7F3EA; padding: 10px 20px;
+  display: flex; align-items: center; gap: 14px;
+  font-size: 13px; border-bottom: 1px solid rgba(255,255,255,.12);
+}
+.deck-bar a, .deck-bar button {
+  background: rgba(255,255,255,.12); color: #fff; border: 0;
+  padding: 7px 13px; border-radius: 6px; cursor: pointer;
+  font-size: 13px; font-weight: 600; text-decoration: none;
+}
+.deck-bar a:hover, .deck-bar button:hover { background: rgba(255,255,255,.22); }
+body.deck { padding-top: 70px; }
+
+@media print {
+  .deck-bar { display: none !important; }
+  body.deck { background: #fff; padding: 0; margin: 0; }
+  .slide { margin: 0; box-shadow: none; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+}
+
+/* ── Four-language text on English-branded slides ────────────────────
+   Plex and Fraunces carry none of the dot-below vowels or the Hausa
+   hooked letters (see styles/fonts.css for the audit), so any run of
+   yo / ha / ig text opts into the verified multilingual stack. */
+.multi { font-family: var(--font-multi); }
+.s-code .gl { font-family: var(--font-multi); font-size: 1.05em; }
+
+/* Dense variant, for the three inventory slides that list every page. */
+.s-table-dense { font-size: 8.6pt; }
+.s-table-dense th { padding: 1.8mm 2.4mm; font-size: 7.4pt; }
+.s-table-dense td { padding: 1.6mm 2.4mm; line-height: 1.3; }
+.s-table-dense .s-kicker { font-size: 6.8pt; }
+
+/* Short slides read better optically centred than top-aligned. Rows that
+   grow (.s-cols) are unaffected; this only rebalances fixed-height ones. */
+.s-body { justify-content: center; }
+
+/* Slides where a chart is the hero rather than a supporting panel. */
+.s-chart-lg .ch       { max-height: 68mm; }
+.s-chart-lg .ch-donut { max-height: 58mm; }
+
+/* ── Pitch mode ──────────────────────────────────────────────────────
+   Judged from the back of a room, not read at a desk. Bigger type,
+   fewer words per slide, headlines that carry the argument alone.
+   The technical deck keeps the smaller, denser defaults above. */
+body.pitch .s-title      { font-size: 34pt; }
+body.pitch .s-title-sm   { font-size: 26pt; }
+body.pitch .s-lede       { font-size: 15pt; }
+body.pitch .s-eyebrow    { font-size: 11pt; }
+body.pitch .s-card h3    { font-size: 15pt; }
+body.pitch .s-card p     { font-size: 12pt; line-height: 1.42; }
+body.pitch .s-list li    { font-size: 12.5pt; }
+body.pitch .s-band       { font-size: 12pt; padding: 5mm 6mm; }
+body.pitch .s-note       { font-size: 11pt; }
+body.pitch .s-kicker     { font-size: 9.5pt; }
+body.pitch .s-quote      { font-size: 22pt; }
+body.pitch .s-stat strong{ font-size: 40pt; }
+body.pitch .s-stat span  { font-size: 11.5pt; }
+body.pitch .s-flow-step h4 { font-size: 13pt; }
+body.pitch .s-flow-step p  { font-size: 11pt; }
+body.pitch .s-table      { font-size: 12pt; }
+body.pitch .s-table th   { font-size: 9.5pt; }
+body.pitch .s-table td   { padding: 3.4mm 3mm; }
+body.pitch .slide-cover .s-title { font-size: 46pt; }
+
+/* One number, filling the slide. The problem is the headline. */
+.s-huge { font-family: var(--font-code); font-size: 128pt; line-height: .85;
+          letter-spacing: -.05em; font-weight: 700; color: var(--caution); }
+.s-huge-alt { color: var(--alert); }
+
+/* Source and citation lines. Sentence case — a footnote should not shout. */
+.s-source { font-size: 9.5pt; line-height: 1.4; color: var(--ink-3); max-width: 100ch; }
+body.pitch .s-source { font-size: 10pt; }

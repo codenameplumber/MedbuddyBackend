@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en" data-skin="patient">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diacritic check — MedBuddy</title>
+<link rel="stylesheet" href="/styles/fonts.css">
+<link rel="stylesheet" href="/styles/tokens.css">
+<link rel="stylesheet" href="/styles/app.css">
+<style>
+  .sample { font-size: 2rem; line-height: 1.5; letter-spacing: .02em; }
+  .glyphs { font-size: 2.4rem; letter-spacing: .12em; word-spacing: .3em; }
+  .cmp { display: grid; grid-template-columns: 120px 1fr; gap: var(--s3); align-items: baseline; }
+  .cmp > div:first-child { font-size: var(--step-s); color: var(--ink-3); font-weight: 700;
+                           text-transform: uppercase; letter-spacing: var(--tracking-caps); }
+  .brand { font-family: var(--font-ui); }
+  .multi { font-family: var(--font-multi); }
+</style>
+</head>
+<body>
+<main class="screen" style="max-width:760px;padding-bottom:var(--s7)">
+
+  <header class="page-head">
+    <h1 class="page-title">Diacritic check</h1>
+    <p class="page-sub">
+      Open this on the <strong>actual device you will demo from</strong>. A box, a blank,
+      or a letter that suddenly changes shape mid-word is a failure — and it is the failure
+      that will be on screen while you are talking.
+    </p>
+  </header>
+
+  <div class="band band-alert" style="border-radius:var(--radius)">
+    <span class="band-icon" aria-hidden="true">!</span>
+    <div>
+      <span class="band-title">What the font audit found</span>
+      Twenty characters are missing from every bundled brand font (IBM Plex, Fraunces).
+      Yorùbá and Igbo dot-below vowels sit in the Vietnamese Unicode subset the
+      bundled files skip; the Hausa hooked letters simply have no glyphs in Plex.
+      So the patient app uses a system stack instead — that is what the
+      <strong>multilingual</strong> rows below are testing.
+    </div>
+  </div>
+
+  <div class="section-title">The 20 characters that broke</div>
+  <div class="label"><div class="label-body stack">
+    <div class="cmp">
+      <div>Brand font</div>
+      <div class="glyphs brand">ẹ Ẹ ọ Ọ ị Ị ụ Ụ ṅ Ṅ ṣ Ṣ ɓ Ɓ ɗ Ɗ ƙ Ƙ ƴ Ƴ</div>
+    </div>
+    <div class="cmp">
+      <div>Multilingual</div>
+      <div class="glyphs multi">ẹ Ẹ ọ Ọ ị Ị ụ Ụ ṅ Ṅ ṣ Ṣ ɓ Ɓ ɗ Ɗ ƙ Ƙ ƴ Ƴ</div>
+    </div>
+    <p class="hint">
+      The top row is expected to fall back or break. The bottom row is what ships in the
+      patient app and must be clean.
+    </p>
+  </div></div>
+
+  <div class="section-title">Real interface strings</div>
+  <div class="label"><div class="label-body stack">
+
+    <div class="cmp"><div>English</div>
+      <div class="sample multi">Take one tablet each day.</div></div>
+
+    <div class="cmp"><div>Yorùbá</div>
+      <div class="sample multi">Mu tábìlẹ́tì kan lójoojúmọ́. Ṣọ́ra fún ìṣòro ọkàn.</div></div>
+
+    <div class="cmp"><div>Hausa</div>
+      <div class="sample multi">Sha kwaya ɗaya kowace rana. Ka kiyaye ƙarfin jini.</div></div>
+
+    <div class="cmp"><div>Igbo</div>
+      <div class="sample multi">Ṅụọ otu mgbịrịgba kwa ụbọchị. Lezie ọrịa obi anya.</div></div>
+
+  </div></div>
+
+  <div class="section-title">Tone marks stacked on dotted vowels</div>
+  <div class="label"><div class="label-body">
+    <p class="hint" style="margin-bottom:var(--s3)">
+      The hardest case: a combining acute or grave sitting on a vowel that already carries a
+      dot below. If the marks collide, overlap, or the dot disappears, the stack is wrong.
+    </p>
+    <div class="glyphs multi">ẹ́ ẹ̀ ọ́ ọ̀ ṣ́ ị́ ụ̀ ṅ́</div>
+    <div class="sample multi" style="margin-top:var(--s3)">Ọ̀gá mi, ẹ jọ̀wọ́ ẹ mú òògùn yín.</div>
+  </div></div>
+
+  <div class="section-title">Monospace — dosages must stay aligned</div>
+  <div class="label"><div class="label-body">
+    <pre class="dosage" style="margin:0">08:00   500 mg   ẹ̀ẹ̀kan
+20:00   500 mg   ẹ̀ẹ̀mejì
+07:00   600 mg   ṅụọ otu</pre>
+  </div></div>
+
+  <p class="center" style="margin-top:var(--s6)">
+    <a class="btn btn-secondary" href="/">← Back to MedBuddy</a>
+  </p>
+</main>
+</body>
+</html>

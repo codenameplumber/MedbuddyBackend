@@ -36,6 +36,7 @@ return [
     ],
 
     'profile' => [
+        'caregiverHint' => 'Your clinic can send this person a summary of how you are doing. They ask you first.',
         'consent'        => 'What you agree to',
         'reminders'      => 'Send me dose reminders by email',
         'remindersHint'  => 'A reminder names the time of day and nothing else — never your medicine or your condition.',
@@ -63,6 +64,7 @@ return [
     ],
 
     'today' => [
+        'doseTime'   => ':time',
         'title'      => 'Today',
         'none'       => 'No medicines scheduled yet.',
         'addFirst'   => 'Add your first medicine',
@@ -75,6 +77,11 @@ return [
     ],
 
     'meds' => [
+        'selfAdded'   => 'added by you',
+        'clinicKeeps' => 'Your clinic keeps this list. You can add anything else you take yourself.',
+        'notSure'     => 'Not sure what a tablet is?',
+        "ownTitle"    => "This one is yours, not the clinic's",
+        'ownBody'     => 'Anything you add here is marked as added by you. Your clinic can see it, but only they can change a medicine they prescribed.',
         'title'               => 'My medicines',
         'add'                 => 'Add a medicine',
         'none'                => 'You have not added any medicines yet.',

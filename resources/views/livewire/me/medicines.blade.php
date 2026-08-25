@@ -15,7 +15,7 @@
           @foreach ($rx->times ?? [] as $t)<span class="badge">{{ $t }}</span>@endforeach
           <span class="hint">{{ count($rx->times ?? []) }} {{ __('me.meds.doseCount') }}</span>
           @if ($rx->ai_summary)<span class="badge badge-safe">{{ __('me.explain.title') }}</span>@endif
-          @unless ($rx->prescribed_by)<span class="badge">added by you</span>@endunless
+          @unless ($rx->prescribed_by)<span class="badge">{{ __('me.meds.selfAdded') }}</span>@endunless
         </div>
       </div>
     </a>
@@ -23,7 +23,7 @@
     <div class="label"><div class="empty">
       <p style="font-size:var(--step-1)">{{ __('me.meds.none') }}</p>
       <p class="hint" style="margin-top:var(--s3)">
-        Your clinic keeps this list. You can add anything else you take yourself.
+        {{ __('me.meds.clinicKeeps') }}
       </p>
     </div></div>
   @endforelse
@@ -34,7 +34,7 @@
   <div class="band band-info" style="border-radius:var(--radius);margin-top:var(--s5)">
     <x-icon name="info" class="band-icon" />
     <div>
-      <span class="band-title">Not sure what a tablet is?</span>
+      <span class="band-title">{{ __('me.meds.notSure') }}</span>
       <a href="{{ route('me.scan') }}" wire:navigate>{{ __('me.explain.lead') }}</a>
     </div>
   </div>

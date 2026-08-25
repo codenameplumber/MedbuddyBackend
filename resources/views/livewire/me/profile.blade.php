@@ -71,7 +71,7 @@
       <strong>{{ $me->caregiver_name }}</strong>
       <div class="hint mono">{{ $me->caregiver_email }}</div>
       <p class="hint" style="margin-top:var(--s2)">
-        Your clinic can send this person a summary of how you are doing. They ask you first.
+        {{ __('me.profile.caregiverHint') }}
       </p>
     </div></div>
   @endif

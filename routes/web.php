@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\DeckController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PatientAuthController;
 use App\Http\Controllers\RegisterController;
@@ -45,6 +46,21 @@ Route::middleware('patient')->prefix('me')->name('me.')->group(function () {
     Route::get('/profile',       Me\Profile::class)->name('profile');
     Route::get('/emergency',     [PatientAuthController::class, 'emergency'])->name('emergency');
 });
+
+/*
+ | The decks and the diacritic tool, carried over from the design repo. Their
+ | charts render from the real database rather than the prototype's browser
+ | seed, so they cannot drift from the product they describe.
+ */
+Route::get('/pitch', [DeckController::class, 'pitch'])->name('deck.pitch');
+Route::get('/technical-deck', [DeckController::class, 'technical'])->name('deck.technical');
+
+/*
+ | The offline shell. Public and Livewire-free on purpose: the service worker
+ | caches it before anyone has signed in, and it is the one screen that has to
+ | render with no connection and no session.
+ */
+Route::view('/offline', 'me.offline')->name('me.offline');
 
 // ── Auth ─────────────────────────────────────────────────────────────
 Route::get('/login', [AuthController::class, 'show'])->middleware('guest')->name('login');

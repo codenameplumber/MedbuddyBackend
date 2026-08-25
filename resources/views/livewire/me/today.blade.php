@@ -13,10 +13,12 @@
           <div class="streak-n">{{ $streak }}</div>
           <div class="muted">{{ $streak > 0 ? __('me.today.streak') : __('me.today.streakNone') }}</div>
           @if ($rate !== null)
-            <div class="hint" style="margin-top:var(--s2)">{{ $rate }}%  · 7</div>
+            <div class="hint" style="margin-top:var(--s2)">
+              {{ $rate }}% {{ __('me.history.week') }}
+            </div>
           @endif
           <a class="btn btn-quiet btn-sm" style="padding-left:0" href="{{ route('me.history') }}" wire:navigate>
-            {{ __('me.nav.today') }} →
+            {{ __('me.history.link') }} →
           </a>
         </div>
       </div>
@@ -38,9 +40,9 @@
     @if (! $doses)
       <div class="label"><div class="empty">
         <p style="font-size:var(--step-1)">{{ __('me.today.none') }}</p>
-        <p class="hint" style="margin-top:var(--s3)">
-          Your clinic adds your medicines. Call them if something is missing.
-        </p>
+        <a class="btn" style="margin-top:var(--s5)" href="{{ route('me.medicine.add') }}" wire:navigate>
+          {{ __('me.today.addFirst') }}
+        </a>
       </div></div>
     @else
       <div class="stack">
@@ -50,7 +52,7 @@
             <div class="dose">
               <a class="grow" href="{{ route('me.medicine', $d['prescription']) }}" wire:navigate
                  style="text-decoration:none;color:inherit">
-                <div class="dose-time">{{ $d['time'] }}</div>
+                <div class="dose-time">{{ \App\Support\Clock::time($d['time']) }}</div>
                 <div class="med-name">{{ $d['prescription']->name }}</div>
                 @if ($d['prescription']->strength)<div class="dosage">{{ $d['prescription']->strength }}</div>@endif
                 @if ($d['prescription']->purpose)<div class="med-generic">{{ $d['prescription']->purpose }}</div>@endif
@@ -65,7 +67,7 @@
       </div>
 
       <a class="btn btn-secondary btn-block" style="margin-top:var(--s5)" href="{{ route('me.report') }}" wire:navigate>
-        <x-icon name="chat" class="i-sm" /> {{ __('respond.q2') }}
+        <x-icon name="chat" class="i-sm" /> {{ __('me.report.title') }}
       </a>
     @endif
   </div>
