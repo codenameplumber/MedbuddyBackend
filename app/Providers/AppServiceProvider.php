@@ -3,6 +3,9 @@
 namespace App\Providers;
 
 use Anthropic\Client;
+use App\Services\Ai\AnthropicProvider;
+use App\Services\Ai\OpenAiProvider;
+use App\Services\Ai\Provider;
 use App\Models\DoseEvent;
 use App\Models\Patient;
 use App\Models\Prescription;
@@ -11,6 +14,8 @@ use App\Policies\PatientPolicy;
 use App\Policies\PrescriptionPolicy;
 use App\Policies\UserPolicy;
 use App\Services\ScheduleService;
+use OpenAI;
+use OpenAI\Contracts\ClientContract;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -29,6 +34,32 @@ class AppServiceProvider extends ServiceProvider
             apiKey: (string) config('services.anthropic.key'),
             baseUrl: config('services.anthropic.base_url') ?: null,
         ));
+
+        /*
+         | The OpenAI client, built from config for the same reason as the
+         | Anthropic one: config:cache and a test that overrides the key must
+         | both behave, and a test needs somewhere to inject a fake transport.
+         */
+        $this->app->bind(ClientContract::class, function () {
+            $factory = OpenAI::factory()->withApiKey((string) config('services.openai.key'));
+
+            if ($base = config('services.openai.base_url')) {
+                $factory = $factory->withBaseUri($base);
+            }
+
+            return $factory->make();
+        });
+
+        /*
+         | Which model answers. OpenAI by default; Claude when asked for.
+         | An unrecognised value falls back to the default rather than
+         | throwing, because a typo in an env var should not take down every
+         | AI screen at once.
+         */
+        $this->app->bind(Provider::class, fn () => match (config('services.ai.provider')) {
+            'anthropic' => new AnthropicProvider,
+            default     => new OpenAiProvider,
+        });
 
         // Singleton so its dose-event cache is shared by every caller in the
         // request. See the performance contract on the class.

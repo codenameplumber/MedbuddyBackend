@@ -81,6 +81,7 @@
 
 @livewireScripts
 <script src="{{ asset('js/recorder.js') }}" defer></script>
+<script src="{{ asset('js/speak.js') }}" defer></script>
 <script>
 // Service worker. Registered from the patient shell only — the clinic console
 // is a desk tool and has nothing to gain from a cache it could read stale

@@ -44,6 +44,52 @@
       Not enrolled yet?
       <a href="{{ route('register') }}" style="color:var(--accent);font-weight:650">Create an account</a>
     </p>
+
+    {{--
+      Demo shortcut. The clinic sign-in page lists its seeded accounts because
+      it has passwords to list; this one has none, which used to leave the
+      patient app with no way in that did not involve reading a mailbox.
+    --}}
+    @if ($demoPatients->isNotEmpty())
+      <div class="section-title" style="margin-top:var(--s7)">Open the demo as a patient</div>
+      <p class="hint">
+        Skip the mailbox. Every person below is fabricated — one tap signs you in as them,
+        in their language.
+      </p>
+
+      <div class="stack-s" style="margin-top:var(--s4)">
+        @foreach ($demoPatients as $p)
+          <form method="POST" action="{{ route('me.demo') }}">
+            @csrf
+            <input type="hidden" name="patient" value="{{ $p->id }}">
+            <button class="label" type="submit"
+                    style="display:block;width:100%;text-align:left;border:1px solid var(--rule);
+                           background:var(--card);cursor:pointer;padding:0">
+              <span class="label-body" style="display:block">
+                <span class="row-between wrap" style="gap:var(--s2)">
+                  <span>
+                    <strong>{{ $p->name }}</strong>
+                    <span class="hint" style="display:block">
+                      {{ $p->langName() }} · {{ $p->condition }}{{ $p->age ? ' · '.$p->age : '' }}
+                    </span>
+                  </span>
+                  <x-icon name="arrowR" class="i-sm" />
+                </span>
+              </span>
+            </button>
+          </form>
+        @endforeach
+      </div>
+
+      <div class="band band-caution" style="border-radius:var(--radius);margin-top:var(--s5)">
+        <x-icon name="alert" class="band-icon" />
+        <div>
+          <span class="band-title">Demo only</span>
+          This panel appears because <span class="mono">MEDBUDDY_DEMO_SIGNIN</span> is on. It
+          only ever lists the fabricated cohort, and refuses any record that is not one.
+        </div>
+      </div>
+    @endif
   @endif
 
   <div class="band band-info" style="border-radius:var(--radius);margin-top:var(--s6)">

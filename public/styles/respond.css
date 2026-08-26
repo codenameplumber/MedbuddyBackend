@@ -140,3 +140,211 @@
   color: var(--ink-3); font-size: var(--step-s);
   padding-top: var(--s4); border-top: 1px solid var(--rule);
 }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Photo picker — patient app
+
+   Built in the patient skin's own vocabulary: paper stock, a printed
+   rule, a caution-orange accent. The empty state is a slot shaped like
+   the thing that goes in it, so what to do is obvious before any label
+   is read — which matters for a screen whose whole reason to exist is
+   that reading is the hard part.
+   ═══════════════════════════════════════════════════════════════════ */
+
+.photo-pick { border: 0; padding: 0; margin: 0; min-width: 0; }
+.photo-pick > .field-label { padding: 0; }
+
+/* The file input itself is never seen; the whole button is the target. */
+.sr-only-input {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Two stacked full-width buttons at the body size shouted. Smaller label,
+   but the padding keeps the tap target at the 56px floor this app holds to. */
+.photo-btn {
+  cursor: pointer;
+  position: relative;
+  font-size: var(--step-s);
+  letter-spacing: .01em;
+  min-height: var(--tap);
+  padding-inline: var(--s4);
+  gap: var(--s2);
+}
+.photo-btn:focus-within { box-shadow: var(--focus); }
+
+/* ── Empty slot ─────────────────────────────────────────────────── */
+
+.photo-slot {
+  position: relative;
+  margin-top: var(--s3);
+  padding: var(--s6) var(--s4) var(--s5);
+  text-align: center;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-l);
+  background:
+    radial-gradient(120% 90% at 50% 0%, var(--card) 0%, var(--paper-2) 100%);
+  box-shadow: var(--e1);
+  transition: border-color var(--motion), box-shadow var(--motion);
+}
+
+.photo-slot:focus-within {
+  border-color: var(--caution-line);
+  box-shadow: var(--e2);
+}
+
+.photo-slot.is-busy { opacity: .6; }
+
+/* A frame, dashed like a place to put something, with corner ticks that
+   read as a viewfinder rather than decoration. */
+.photo-slot-frame {
+  position: relative;
+  width: 92px; height: 92px;
+  margin: 0 auto var(--s4);
+  display: grid;
+  place-items: center;
+  border: 2px dashed var(--rule-2);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+
+.photo-slot-frame::before,
+.photo-slot-frame::after {
+  content: "";
+  position: absolute;
+  width: 16px; height: 16px;
+  border: 2px solid var(--caution);
+  border-radius: 2px;
+}
+.photo-slot-frame::before { top: -2px; left: -2px; border-right: 0; border-bottom: 0; }
+.photo-slot-frame::after  { bottom: -2px; right: -2px; border-left: 0; border-top: 0; }
+
+.photo-slot-icon { color: var(--caution); display: grid; place-items: center; }
+
+.photo-slot-lead {
+  margin: 0 auto var(--s5);
+  max-width: 30ch;
+  color: var(--ink-2);
+  font-size: var(--step-s);
+  line-height: 1.5;
+}
+
+.photo-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s3);
+  max-width: 21rem;
+  margin: 0 auto;
+}
+
+/* Two side by side once there is room for both to stay full-size. */
+@media (min-width: 30rem) {
+  .photo-actions { flex-direction: row; }
+  .photo-actions > * { flex: 1; }
+}
+
+.photo-busy {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s2);
+  margin: var(--s4) 0 0;
+  color: var(--ink-2);
+  font-size: var(--step-s);
+}
+
+.photo-spinner {
+  width: 14px; height: 14px;
+  border: 2px solid var(--rule-2);
+  border-top-color: var(--caution);
+  border-radius: 50%;
+  animation: photo-spin .7s linear infinite;
+}
+
+@keyframes photo-spin { to { transform: rotate(360deg); } }
+
+/* ── Preview ────────────────────────────────────────────────────── */
+
+.photo-preview {
+  margin: var(--s3) 0 0;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-l);
+  overflow: hidden;
+  background: var(--card);
+  box-shadow: var(--e2);
+}
+
+/* Checkerboard behind the image so a white label reads as a photograph
+   with edges rather than as part of the page. */
+.photo-preview-img {
+  display: grid;
+  place-items: center;
+  padding: var(--s3);
+  background-color: var(--paper-2);
+  background-image:
+    linear-gradient(45deg, rgba(125,119,112,.07) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(125,119,112,.07) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(125,119,112,.07) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(125,119,112,.07) 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+}
+
+.photo-preview-img img {
+  display: block;
+  max-width: 100%;
+  max-height: 20rem;
+  border-radius: var(--radius-s);
+  box-shadow: var(--e2);
+}
+
+.photo-preview figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2);
+  padding: var(--s3);
+  border-top: 1px solid var(--rule);
+  background: var(--card);
+}
+
+.photo-ok {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s1);
+  color: var(--safe);
+  font-weight: 600;
+  font-size: var(--step-s);
+}
+
+/* ── Read aloud ─────────────────────────────────────────────────── */
+
+.speak {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s2);
+  margin-top: var(--s3);
+}
+
+.speak .btn { padding-left: 0; }
+.speak [data-speak-note] { font-style: italic; flex: 1 1 16ch; min-width: 0; }
+
+/* A quiet pulse while it is talking, so it is obvious which block is
+   being read and which button stops it. */
+.speak.is-speaking .btn { color: var(--caution); }
+.speak.is-speaking .btn .i { animation: speak-pulse 1.1s ease-in-out infinite; }
+
+@keyframes speak-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: .55; transform: scale(.86); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .photo-spinner, .speak.is-speaking .btn .i { animation: none; }
+}

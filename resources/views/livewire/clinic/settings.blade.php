@@ -45,14 +45,14 @@
       <div class="row-between wrap">
         <div>
           <strong>{{ $aiLive ? 'Live' : 'Demo (mock)' }}</strong>
-          <div class="hint">Model: <span class="mono">{{ $aiModel }}</span></div>
+          <div class="hint">{{ $aiProvider }} · <span class="mono">{{ $aiModel }}</span></div>
         </div>
         <span class="badge badge-{{ $aiLive ? 'safe' : 'info' }}">{{ $aiLive ? 'Key present' : 'No key' }}</span>
       </div>
       <div class="foot-note">
         The key lives in <span class="mono">.env</span> and never reaches a browser — the single
         biggest security fix over the front-end-only prototype. Set
-        <span class="mono">ANTHROPIC_API_KEY</span> and <span class="mono">MEDBUDDY_AI_MODE=live</span>
+        <span class="mono">MEDBUDDY_AI_PROVIDER</span>, the matching API key and <span class="mono">MEDBUDDY_AI_MODE=live</span>
         to switch on. Mock mode keeps every screen demoable with no key and no network.
       </div>
       <div class="band band-info" style="border-radius:var(--radius)">

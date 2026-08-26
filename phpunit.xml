@@ -33,5 +33,11 @@
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
             <env name="APP_TIMEZONE" value="Africa/Lagos"/>
+        <!-- The sign-in bypass starts off, so a test that wants it says so. -->
+        <env name="MEDBUDDY_DEMO_SIGNIN" value="false"/>
+        <!-- And no test may accidentally reach a real provider. -->
+        <env name="MEDBUDDY_AI_MODE" value="mock"/>
+        <env name="OPENAI_API_KEY" value=""/>
+        <env name="ANTHROPIC_API_KEY" value=""/>
     </php>
 </phpunit>

@@ -2,11 +2,7 @@
 
 namespace App\Services;
 
-use Anthropic\Client;
-use Anthropic\Core\Exceptions\APIStatusException;
-use Anthropic\Core\Exceptions\AnthropicException;
-use Anthropic\Core\Exceptions\RateLimitException;
-use Illuminate\Support\Facades\Log;
+use App\Services\Ai\Provider;
 
 /**
  * The AI boundary. This class, and only this class, talks to a model.
@@ -15,38 +11,39 @@ use Illuminate\Support\Facades\Log;
  *   1. The key lives in .env, never in a page. No key is ever shipped.
  *   2. Every call can be rate limited, cached, retried and logged.
  *
- * The engine is Claude, through the official Anthropic PHP SDK. Structured
- * outputs (output_config.format) guarantee the response shape, so the UI can
- * rely on a confidence field existing rather than hoping for one.
+ * PROVIDER: Claude or GPT, chosen by MEDBUDDY_AI_PROVIDER. Both are wired
+ * through App\Services\Ai\Provider, so nothing above this class — no screen,
+ * no test of a screen — can tell which one answered. Swapping is an env change
+ * and a config:clear.
  *
  * MODE:
  *   'mock' (default) returns canned responses. No key, no network, so the
  *          whole platform stays demoable and every UI state — low confidence,
  *          refusal, cannot_identify — can be exercised deliberately.
- *   'live' calls Claude from the server.
+ *   'live' calls the configured provider from the server.
+ *
+ * Every failure path lands on the same mock response rather than an exception:
+ * a patient asking about their medicine must never be shown a stack trace.
  */
 class AiService
 {
     public function __construct(private TriageService $triage) {}
 
-    private function mode(): string  { return config('services.anthropic.mode', 'mock'); }
-    private function key(): ?string  { return config('services.anthropic.key'); }
-    private function model(): string { return config('services.anthropic.model', 'claude-opus-5'); }
-    private function effort(): string { return config('services.anthropic.effort', 'medium'); }
-    private function maxTokens(): int { return (int) config('services.anthropic.max_tokens', 4000); }
+    private function mode(): string { return config('services.ai.mode', 'mock'); }
+
+    /** The provider currently selected. Resolved per call so config() wins. */
+    public function provider(): Provider
+    {
+        return app(Provider::class);
+    }
+
+    public function providerName(): string { return $this->provider()->name(); }
+    public function providerLabel(): string { return $this->provider()->label(); }
+    public function model(): string { return $this->provider()->model(); }
 
     public function isLive(): bool
     {
-        return $this->mode() === 'live' && filled($this->key());
-    }
-
-    /**
-     * Resolved from the container so a test can swap in a client with a fake
-     * PSR-18 transporter and assert on the request that would have gone out.
-     */
-    private function client(): Client
-    {
-        return app(Client::class);
+        return $this->mode() === 'live' && $this->provider()->isConfigured();
     }
 
     // ── Schemas ──────────────────────────────────────────────────────
@@ -208,85 +205,16 @@ the medicine list, and do not speculate about why doses were missed.',
             return $this->mock($task, $user);
         }
 
-        // Image first, then the text: Claude reads a picture better when the
-        // question comes after it.
-        $content = [];
-        if ($imageDataUrl && $image = $this->imageBlock($imageDataUrl)) {
-            $content[] = $image;
-        }
-        $content[] = ['type' => 'text', 'text' => $user];
+        $parsed = $this->provider()->complete($task, $schema, $system, $user, $imageDataUrl);
 
-        try {
-            $message = $this->client()->beta->messages->create(
-                maxTokens: $this->maxTokens(),
-                messages: [['role' => 'user', 'content' => $content]],
-                model: $this->model(),
-                system: $system,
-                outputConfig: [
-                    'effort' => $this->effort(),
-                    'format' => ['type' => 'json_schema', 'schema' => $schema],
-                ],
-                // A policy decline on a medicines question is a real
-                // possibility. Rather than dropping the patient to a canned
-                // answer, the API re-runs the request on a fallback model
-                // inside the same call.
-                fallbacks: 'default',
-                betas: ['server-side-fallback-2026-07-01'],
-            );
-        } catch (RateLimitException $e) {
-            Log::warning('[ai] rate limited', ['task' => $task]);
-            return $this->mock($task, $user);
-        } catch (APIStatusException $e) {
-            Log::warning('[ai] request failed', ['task' => $task, 'error' => $e->getMessage()]);
-            return $this->mock($task, $user);
-        } catch (AnthropicException $e) {
-            Log::warning('[ai] transport failure', ['task' => $task, 'error' => $e->getMessage()]);
-            return $this->mock($task, $user);
-        } catch (\Throwable $e) {
-            Log::warning('[ai] unexpected failure', ['task' => $task, 'error' => $e->getMessage()]);
-            return $this->mock($task, $user);
-        }
-
-        // The whole chain declined. Degrade rather than show a patient an error.
-        if (($message->stopReason ?? null) === 'refusal') {
-            Log::warning('[ai] refused', ['task' => $task, 'category' => $message->stopDetails->category ?? null]);
-            return $this->mock($task, $user);
-        }
-
-        $raw = '';
-        foreach ($message->content as $block) {
-            if (($block->type ?? null) === 'text') {
-                $raw .= $block->text;
-            }
-        }
-
-        $parsed = json_decode(trim($raw), true);
-
-        if (! is_array($parsed)) {
-            Log::warning('[ai] unparseable response', ['task' => $task]);
+        // The provider logged why. Anything it could not complete — no key,
+        // rate limit, refusal, unparseable body — degrades to an answer the
+        // patient can still act on.
+        if ($parsed === null) {
             return $this->mock($task, $user);
         }
 
         return $this->validate($parsed, $schema, $task);
-    }
-
-    /**
-     * `data:image/jpeg;base64,…` is what the browser hands us. Anthropic wants
-     * the media type and the payload separately.
-     *
-     * @return array<string,mixed>|null
-     */
-    private function imageBlock(string $dataUrl): ?array
-    {
-        if (! preg_match('#^data:(image/(?:jpeg|png|gif|webp));base64,(.+)$#s', $dataUrl, $m)) {
-            Log::warning('[ai] unsupported image payload');
-            return null;
-        }
-
-        return [
-            'type' => 'image',
-            'source' => ['type' => 'base64', 'media_type' => $m[1], 'data' => $m[2]],
-        ];
     }
 
     /**

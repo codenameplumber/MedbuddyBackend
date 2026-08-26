@@ -59,8 +59,14 @@ class MailTest extends Command
         }
 
         $this->newLine();
-        $this->line('  Mailer      <fg=yellow>'.config('mail.default').'</> via '
-            .config('mail.mailers.smtp.host').':'.config('mail.mailers.smtp.port'));
+        $mailer = (string) config('mail.default');
+
+        $this->line('  Mailer      <fg=yellow>'.$mailer.'</>'.match ($mailer) {
+            'smtp'   => ' via '.config('mail.mailers.smtp.host').':'.config('mail.mailers.smtp.port'),
+            'resend' => ' — Resend HTTP API'.(filled(config('services.resend.key')) ? '' : '  <fg=red>(no RESEND_API_KEY)</>'),
+            'log'    => ' — writes to storage/logs, sends nothing',
+            default  => '',
+        });
         $this->line('  From        '.config('mail.from.address'));
         $this->line('  To          <fg=yellow>'.$to.'</>');
         $this->line('  As patient  '.$patient->name.' ('.$patient->langName().')');
@@ -77,15 +83,27 @@ class MailTest extends Command
         DB::beginTransaction();
 
         try {
-            $reminder = Reminder::create([
-                'patient_id' => $patient->id,
-                'dose_date'  => today()->toDateString(),
-                'dose_time'  => $patient->activePrescriptions->first()->times[0] ?? '08:00',
-                'slot'       => 'morning',
-                'channel'    => 'mail',
-                'to'         => $to,
-                'sent_at'    => now(),
-            ]);
+            $time = $patient->activePrescriptions->first()->times[0] ?? '08:00';
+
+            // One reminder per patient per dose window is a unique index, and
+            // this patient very often already has today's. Take the row over
+            // rather than colliding with it — the transaction puts the
+            // original back, so the outbox is untouched either way. Creating
+            // blind here made the command fail with a constraint violation
+            // that read like an SMTP problem.
+            $reminder = Reminder::updateOrCreate(
+                [
+                    'patient_id' => $patient->id,
+                    'dose_date'  => today()->toDateString(),
+                    'dose_time'  => $time,
+                ],
+                [
+                    'slot'    => 'morning',
+                    'channel' => 'mail',
+                    'to'      => $to,
+                    'sent_at' => now(),
+                ],
+            );
             $reminder->setRelation('patient', $patient);
 
             // sendNow, not notify: these notifications are queued in production,
@@ -102,10 +120,7 @@ class MailTest extends Command
             $this->line('  <fg=red>failed</>');
             $this->error('  '.$e->getMessage());
             $this->newLine();
-            $this->line('  Most common causes, in order:');
-            $this->line('   1. MAIL_USERNAME / MAIL_PASSWORD are empty, or from a different Mailtrap inbox.');
-            $this->line('   2. MAIL_PORT is blocked outbound. Mailtrap also accepts 587 and 25.');
-            $this->line('   3. Config is cached from before you edited .env — run: php artisan config:clear');
+            $this->advise($e, (string) config('mail.default'));
 
             return self::FAILURE;
         }
@@ -113,11 +128,63 @@ class MailTest extends Command
         DB::rollBack();
 
         $this->newLine();
-        $this->info(config('mail.default') === 'log'
-            ? 'Mailer is "log": nothing left the machine. Look in storage/logs/laravel.log.'
-            : 'Both messages were handed to the SMTP server. Open the inbox to read them.');
+        $this->info(match ((string) config('mail.default')) {
+            'log'    => 'Mailer is "log": nothing left the machine. Look in storage/logs/laravel.log.',
+            'resend' => 'Resend accepted both messages. Check the inbox, and https://resend.com/emails for delivery.',
+            default  => 'Both messages were handed to the mail server. Open the inbox to read them.',
+        });
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Say the thing that is actually wrong.
+     *
+     * The first version printed the Mailtrap SMTP checklist under every
+     * failure, including a Resend API error and a database constraint
+     * violation — which is the most misleading output it could produce, at the
+     * moment someone is least able to tell.
+     */
+    private function advise(\Throwable $e, string $mailer): void
+    {
+        $message = $e->getMessage();
+
+        // Resend answers over HTTP, so its failures never look like SMTP.
+        if ($mailer === 'resend' || str_contains($message, 'Resend')) {
+            if (str_contains($message, 'not verified') || str_contains($message, 'domains')) {
+                $this->line('  The API key is fine — Resend accepted it. The from-domain is not.');
+                $this->line('  Either:');
+                $this->line('   1. Verify the domain at <fg=yellow>https://resend.com/domains</> and point');
+                $this->line('      MAIL_FROM_ADDRESS at an address on it.');
+                $this->line('   2. Or, to test right now with no domain at all, use the Resend sandbox sender:');
+                $this->line('        <fg=yellow>MAIL_FROM_ADDRESS=onboarding@resend.dev</>');
+                $this->line('      It only delivers to the address that owns the Resend account.');
+
+                return;
+            }
+
+            if (str_contains($message, 'API key') || str_contains($message, 'Unauthorized') || str_contains($message, '401')) {
+                $this->line('  Resend rejected the key. Check RESEND_API_KEY, then: php artisan config:clear');
+
+                return;
+            }
+
+            $this->line('  Resend rejected the request. The message above is theirs, verbatim.');
+
+            return;
+        }
+
+        if ($mailer === 'smtp') {
+            $this->line('  Most common causes, in order:');
+            $this->line('   1. MAIL_USERNAME / MAIL_PASSWORD are empty, or from a different inbox.');
+            $this->line('   2. MAIL_PORT is blocked outbound. Mailtrap also accepts 587 and 25.');
+            $this->line('   3. Config is cached from before you edited .env — run: php artisan config:clear');
+
+            return;
+        }
+
+        $this->line('  That is not a mail transport error — the message never reached the mailer.');
+        $this->line('  '.get_class($e));
     }
 
     private function send(string $label, callable $fn): void

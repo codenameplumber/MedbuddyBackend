@@ -57,10 +57,42 @@ class Scan extends Component
         }
     }
 
+    /**
+     * What "read aloud" reads.
+     *
+     * Not the whole screen: the point is the parts a patient has to act on —
+     * what it is, how to take it, what to watch for. Headings and layout are
+     * for the eye.
+     */
+    private function spokenSummary(): string
+    {
+        if (! $this->result) {
+            return '';
+        }
+
+        if ($this->mode === 'identify') {
+            return trim($this->result['visualFeatures'].' '
+                .AiService::displayRule($this->result['confidence'])['note']);
+        }
+
+        $parts = array_filter([
+            $this->result['medicineName'] ?? null,
+            $this->result['purpose'] ?? null,
+            $this->result['dosing'] ?? null,
+            ...($this->result['warnings'] ?? []),
+        ]);
+
+        return trim(implode(' ', $parts));
+    }
+
     public function render(AiService $ai)
     {
+        $me = $this->me();
+
         return view('livewire.me.scan', [
             'live'        => $ai->isLive(),
+            'lang'        => $me->lang,
+            'spoken'      => $this->spokenSummary(),
             'displayRule' => $this->result && $this->mode === 'identify'
                 ? AiService::displayRule($this->result['confidence'])
                 : null,

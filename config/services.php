@@ -37,17 +37,34 @@ return [
 
 
     /*
-    | The AI engine. One provider, one class that talks to it (AiService).
+    | The AI engine.
+    |
+    | OpenAI answers by default. Claude remains wired behind the same
+    | App\Services\Ai\Provider interface, so switching is an env change —
+    | no screen and no test of a screen knows which one it is talking to.
+    |
     | 'mock' keeps the whole app demoable with no key and no network; 'live'
-    | calls Claude from the server. The key never reaches a browser.
+    | calls the selected provider from the server. The key never reaches a
+    | browser, and AiLiveModeTest asserts that no Blade view can read it.
     */
+    'ai' => [
+        'provider' => env('MEDBUDDY_AI_PROVIDER', 'openai'),      // openai | anthropic
+        'mode'     => env('MEDBUDDY_AI_MODE', 'mock'),            // mock | live
+    ],
+
     'anthropic' => [
         'key'        => env('ANTHROPIC_API_KEY'),
         'model'      => env('ANTHROPIC_MODEL', 'claude-opus-5'),
-        'effort'     => env('ANTHROPIC_EFFORT', 'medium'),
+        'effort'     => env('ANTHROPIC_EFFORT', 'medium'),        // low | medium | high | xhigh | max
         'max_tokens' => env('ANTHROPIC_MAX_TOKENS', 4000),
         'base_url'   => env('ANTHROPIC_BASE_URL'),
-        'mode'       => env('MEDBUDDY_AI_MODE', 'mock'),
+    ],
+
+    'openai' => [
+        'key'        => env('OPENAI_API_KEY'),
+        'model'      => env('OPENAI_MODEL', 'gpt-4o-mini'),
+        'max_tokens' => env('OPENAI_MAX_TOKENS', 1600),
+        'base_url'   => env('OPENAI_BASE_URL'),
     ],
 
 ];

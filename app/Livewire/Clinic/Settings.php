@@ -13,7 +13,8 @@ class Settings extends Component
     {
         return view('livewire.clinic.settings', [
             'aiLive'   => $ai->isLive(),
-            'aiModel'  => config('services.anthropic.model'),
+            'aiModel'  => app(\App\Services\AiService::class)->model(),
+            'aiProvider' => app(\App\Services\AiService::class)->providerLabel(),
             'mailer'   => config('mail.default'),
             'channels' => config('medbuddy.channels'),
             'thresholds' => [

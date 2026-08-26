@@ -39,6 +39,28 @@ class Doctor extends Command
             $problems++;
         }
 
+        if ($mailer === 'resend') {
+            $key  = (string) config('services.resend.key');
+            $from = (string) config('mail.from.address');
+
+            $this->kv('Transport', 'Resend HTTP API (resend/resend-laravel)');
+            $this->kv('API key', $key !== '' ? 'set ('.substr($key, 0, 8).'…)' : 'MISSING');
+            $this->kv('From address', $from);
+
+            if ($key === '') {
+                $this->warnLine('MAIL_MAILER is resend but RESEND_API_KEY is empty. Every send will throw.');
+                $problems++;
+            }
+
+            if (str_ends_with($from, '@resend.dev')) {
+                $this->warnLine('Sending from the Resend sandbox address. It only ever delivers to the mailbox that owns the Resend account — a real patient will never receive anything.');
+                $this->line('   Verify a domain at <fg=yellow>https://resend.com/domains</> before a pilot.');
+                $problems++;
+            }
+
+            $this->line('   Verify the path end to end with: <fg=yellow>php artisan medbuddy:mail-test you@example.com</>');
+        }
+
         if ($mailer === 'smtp') {
             $host = (string) config('mail.mailers.smtp.host');
             $user = (string) config('mail.mailers.smtp.username');
@@ -184,13 +206,22 @@ class Doctor extends Command
 
         // ── AI ───────────────────────────────────────────────────────
         $this->line("\n<fg=cyan>AI LAYER</>");
-        $this->kv('Provider', 'Anthropic (Claude), via anthropic-ai/sdk');
-        $this->kv('Model', config('services.anthropic.model'));
-        $this->kv('Mode', config('services.anthropic.mode'));
-        $this->kv('Key present', filled(config('services.anthropic.key')) ? 'yes' : 'no');
+        $provider = $ai->provider();
+        $envKey = $provider->name() === 'openai' ? 'OPENAI_API_KEY' : 'ANTHROPIC_API_KEY';
 
-        if (config('services.anthropic.mode') === 'live' && ! filled(config('services.anthropic.key'))) {
-            $this->warnLine('Mode is live but there is no ANTHROPIC_API_KEY. Every screen still works — it falls back to mock answers.');
+        $this->kv('Provider', $provider->label().'  ('.$provider->name().')');
+        $this->kv('Model', $provider->model());
+        $this->kv('Mode', config('services.ai.mode'));
+        $this->kv('Key present', $provider->isConfigured() ? 'yes' : 'no');
+
+        // The other provider, so a switch is one env var rather than a hunt.
+        $other = $provider->name() === 'openai' ? 'anthropic' : 'openai';
+        $this->kv('Also configured', filled(config("services.{$other}.key"))
+            ? $other.' (has a key — switch with MEDBUDDY_AI_PROVIDER='.$other.')'
+            : $other.' (no key)');
+
+        if (config('services.ai.mode') === 'live' && ! $provider->isConfigured()) {
+            $this->warnLine("Mode is live but there is no {$envKey}. Every screen still works — it falls back to mock answers.");
             $problems++;
         }
         $this->kv('Live', $ai->isLive() ? 'yes' : 'no (mock responses)');
@@ -260,6 +291,13 @@ class Doctor extends Command
             }
         }
         $this->kv('Voice notes stored', (string) $voice);
+
+        if (config('medbuddy.demo_signin')) {
+            $this->kv('Demo sign-in', 'ON — /me/login lists the seeded cohort for one-tap entry');
+            $this->warnLine('MEDBUDDY_DEMO_SIGNIN is on. Fine for a demo; it must be off in front of real patients.');
+            $this->line('   It refuses any record not on '.config('medbuddy.demo_domain').', so it cannot reach a real one.');
+            $problems++;
+        }
         if ($orphanAudio > 0) {
             $this->warnLine("{$orphanAudio} report(s) name an audio file that is not on disk.");
             $problems++;

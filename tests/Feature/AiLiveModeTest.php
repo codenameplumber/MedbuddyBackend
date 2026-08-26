@@ -2,43 +2,30 @@
 
 namespace Tests\Feature;
 
-use Anthropic\Client;
+use Anthropic\Client as AnthropicClient;
 use App\Services\AiService;
-use Tests\Support\FakeAnthropicTransport;
+use OpenAI;
+use OpenAI\Contracts\ClientContract;
+use PHPUnit\Framework\Attributes\DataProvider;
+use Tests\Support\FakeAiTransport;
 use Tests\TestCase;
 
 /**
  * Mock mode is what the demo runs on. This covers the other branch: what
- * actually goes to Claude when a key is present, and what happens when the
+ * actually goes to a provider when a key is present, and what happens when the
  * call fails.
  *
- * Nothing here reaches the network. The Anthropic SDK's transport is a
- * constructor option, so the tests swap in a fake PSR-18 client and assert on
- * the exact request the SDK would have sent — which means the suite stays
- * runnable with no key and no connection.
+ * MedBuddy supports two providers. The contract they owe the application is
+ * identical — a validated object, or a graceful degradation, never an
+ * exception at a patient — so most of this file runs twice, once against each.
+ * Where the wire format genuinely differs, the test says which provider it is
+ * about.
+ *
+ * Nothing here reaches the network: both SDKs take an injectable PSR-18
+ * transport, so the suite stays runnable with no keys and no connection.
  */
 class AiLiveModeTest extends TestCase
 {
-    private function live(?FakeAnthropicTransport $transport = null): AiService
-    {
-        config([
-            'services.anthropic.mode'  => 'live',
-            'services.anthropic.key'   => 'sk-ant-test-not-a-real-key',
-            'services.anthropic.model' => 'claude-opus-5',
-        ]);
-
-        if ($transport) {
-            $this->app->instance(Client::class, new Client(
-                apiKey: 'sk-ant-test-not-a-real-key',
-                // No retries: a degradation test should not sit through the
-                // SDK's backoff before falling back.
-                requestOptions: ['transporter' => $transport, 'maxRetries' => 0],
-            ));
-        }
-
-        return app(AiService::class);
-    }
-
     private const GOOD_EXPLAIN = [
         'medicineName' => 'Amlodipine 5 mg', 'readingConfidence' => 'high',
         'purpose' => 'It lowers blood pressure.', 'dosing' => 'One tablet each day.',
@@ -46,22 +33,115 @@ class AiLiveModeTest extends TestCase
         'storage' => 'Somewhere cool and dry.', 'askPharmacist' => false,
     ];
 
-    public function test_a_key_plus_live_mode_is_what_switches_it_on(): void
+    /** Both providers, for the tests that must hold either way. */
+    public static function providers(): array
     {
-        $this->assertFalse(app(AiService::class)->isLive(), 'Default must be mock so the demo needs no key.');
-        $this->assertTrue($this->live()->isLive());
+        return ['openai' => ['openai'], 'anthropic' => ['anthropic']];
+    }
 
-        config(['services.anthropic.key' => '']);
+    /**
+     * Put the service in live mode on $provider, with $transport standing in
+     * for the network.
+     */
+    private function live(string $provider = 'openai', ?FakeAiTransport $transport = null): AiService
+    {
+        config([
+            'services.ai.provider'     => $provider,
+            'services.ai.mode'         => 'live',
+            'services.anthropic.key'   => 'sk-ant-test-not-a-real-key',
+            'services.anthropic.model' => 'claude-opus-5',
+            'services.openai.key'      => 'sk-openai-test-not-a-real-key',
+            'services.openai.model'    => 'gpt-4o-mini',
+        ]);
+
+        if ($transport) {
+            $this->app->instance(AnthropicClient::class, new AnthropicClient(
+                apiKey: 'sk-ant-test-not-a-real-key',
+                // No retries: a degradation test should not sit through backoff.
+                requestOptions: ['transporter' => $transport, 'maxRetries' => 0],
+            ));
+
+            $this->app->instance(ClientContract::class, OpenAI::factory()
+                ->withApiKey('sk-openai-test-not-a-real-key')
+                ->withHttpClient($transport)
+                ->make());
+        }
+
+        return app(AiService::class);
+    }
+
+    /** The canned reply in whichever envelope $provider speaks. */
+    private function replying(string $provider, array $payload): FakeAiTransport
+    {
+        return $provider === 'openai'
+            ? FakeAiTransport::gpt($payload)
+            : FakeAiTransport::claude($payload);
+    }
+
+    // ── Switching ────────────────────────────────────────────────────
+
+    public function test_openai_is_the_default_provider(): void
+    {
+        // Nothing set: the shipped default answers.
+        config(['services.ai.provider' => null]);
+
+        $this->assertSame('openai', app(AiService::class)->providerName());
+    }
+
+    public function test_the_provider_is_chosen_by_one_env_var(): void
+    {
+        config(['services.ai.provider' => 'openai']);
+        $this->assertSame('openai', app(AiService::class)->providerName());
+        $this->assertSame('gpt-4o-mini', app(AiService::class)->model());
+
+        config(['services.ai.provider' => 'anthropic']);
+        $this->assertSame('anthropic', app(AiService::class)->providerName());
+        $this->assertSame('claude-opus-5', app(AiService::class)->model());
+    }
+
+    public function test_an_unknown_provider_falls_back_rather_than_breaking_every_screen(): void
+    {
+        // A typo in an env var should not take the AI screens down.
+        config(['services.ai.provider' => 'gemini-typo']);
+
+        $this->assertSame('openai', app(AiService::class)->providerName());
+    }
+
+    #[DataProvider('providers')]
+    public function test_a_key_plus_live_mode_is_what_switches_it_on(string $provider): void
+    {
+        config(['services.ai.provider' => $provider, 'services.ai.mode' => 'mock']);
+        $this->assertFalse(app(AiService::class)->isLive(), 'Default must be mock so the demo needs no key.');
+
+        $this->assertTrue($this->live($provider)->isLive());
+
+        config(["services.{$provider}.key" => '']);
         $this->assertFalse(app(AiService::class)->isLive(), 'Live mode with no key must fall back, not fail.');
     }
 
-    public function test_the_request_goes_to_claude_with_a_json_output_schema(): void
+    public function test_each_provider_only_needs_its_own_key(): void
     {
-        // Structured outputs are the reason the UI can trust that a
-        // confidence field exists at all.
-        $t = FakeAnthropicTransport::replying(self::GOOD_EXPLAIN);
+        // Having only an OpenAI key must not make the Anthropic provider look
+        // live, or every call silently degrades with no explanation.
+        config([
+            'services.ai.mode' => 'live',
+            'services.anthropic.key' => '',
+            'services.openai.key' => 'sk-openai-test',
+        ]);
 
-        $this->live($t)->explain('AMLODIPINE 5MG', 'Yorùbá');
+        config(['services.ai.provider' => 'openai']);
+        $this->assertTrue(app(AiService::class)->isLive());
+
+        config(['services.ai.provider' => 'anthropic']);
+        $this->assertFalse(app(AiService::class)->isLive());
+    }
+
+    // ── The wire, per provider ───────────────────────────────────────
+
+    public function test_anthropic_gets_a_json_output_schema(): void
+    {
+        $t = FakeAiTransport::claude(self::GOOD_EXPLAIN);
+        $this->live('anthropic', $t)->explain('AMLODIPINE 5MG', 'Yorùbá');
 
         $request = $t->sent[0];
         $body = $t->lastBody();
@@ -69,43 +149,53 @@ class AiLiveModeTest extends TestCase
         $this->assertSame('api.anthropic.com', $request->getUri()->getHost());
         $this->assertStringContainsString('/v1/messages', $request->getUri()->getPath());
         $this->assertSame('sk-ant-test-not-a-real-key', $request->getHeaderLine('x-api-key'));
-
         $this->assertSame('claude-opus-5', $body['model']);
         $this->assertSame('json_schema', $body['output_config']['format']['type']);
         $this->assertSame(AiService::EXPLAIN_SCHEMA, $body['output_config']['format']['schema']);
+
+        // A medicines question is exactly the shape a safety classifier may
+        // decline, so a fallback model is offered rather than dropping the
+        // patient to a canned answer on the first refusal.
+        $this->assertSame('default', $body['fallbacks']);
+        $this->assertContains('server-side-fallback-2026-07-01', $request->getHeader('anthropic-beta'));
     }
 
-    public function test_a_refusal_is_given_a_fallback_model_to_land_on(): void
+    public function test_openai_gets_a_strict_json_schema(): void
     {
-        // A medicines question is exactly the shape a safety classifier may
-        // decline. Rather than dropping the patient to a canned answer on the
-        // first refusal, the API re-runs it on a fallback inside the same call.
-        $t = FakeAnthropicTransport::replying(self::GOOD_EXPLAIN);
+        $t = FakeAiTransport::gpt(self::GOOD_EXPLAIN);
+        $this->live('openai', $t)->explain('AMLODIPINE 5MG', 'Yorùbá');
 
-        $this->live($t)->explain('AMLODIPINE 5MG', 'English');
+        $request = $t->sent[0];
+        $body = $t->lastBody();
+
+        $this->assertSame('api.openai.com', $request->getUri()->getHost());
+        $this->assertStringContainsString('/chat/completions', $request->getUri()->getPath());
+        $this->assertSame('Bearer sk-openai-test-not-a-real-key', $request->getHeaderLine('Authorization'));
+        $this->assertSame('gpt-4o-mini', $body['model']);
+        $this->assertSame('json_schema', $body['response_format']['type']);
+        $this->assertTrue($body['response_format']['json_schema']['strict']);
+        $this->assertSame(AiService::EXPLAIN_SCHEMA, $body['response_format']['json_schema']['schema']);
+    }
+
+    #[DataProvider('providers')]
+    public function test_the_patients_language_reaches_the_system_prompt(string $provider): void
+    {
+        $t = $this->replying($provider, self::GOOD_EXPLAIN);
+        $this->live($provider, $t)->explain('AMLODIPINE 5MG', 'Hausa');
 
         $body = $t->lastBody();
-        $this->assertSame('default', $body['fallbacks']);
-        $this->assertContains('server-side-fallback-2026-07-01', $t->sent[0]->getHeader('anthropic-beta'));
-    }
-
-    public function test_the_patients_language_reaches_the_system_prompt(): void
-    {
-        $t = FakeAnthropicTransport::replying(self::GOOD_EXPLAIN);
-
-        $this->live($t)->explain('AMLODIPINE 5MG', 'Hausa');
-
-        $system = $t->lastBody()['system'];
+        $system = $provider === 'openai'
+            ? $body['messages'][0]['content']
+            : $body['system'];
 
         $this->assertStringContainsString('Hausa', $system);
         $this->assertStringContainsString('Never diagnose', $system);
     }
 
-    public function test_a_photo_is_sent_as_an_image_block_before_the_question(): void
+    public function test_anthropic_gets_the_photo_as_an_image_block_before_the_question(): void
     {
-        $t = FakeAnthropicTransport::replying(self::GOOD_EXPLAIN);
-
-        $this->live($t)->explain('', 'English', 'data:image/jpeg;base64,AAAA');
+        $t = FakeAiTransport::claude(self::GOOD_EXPLAIN);
+        $this->live('anthropic', $t)->explain('', 'English', 'data:image/jpeg;base64,AAAA');
 
         $content = $t->lastBody()['messages'][0]['content'];
 
@@ -117,85 +207,137 @@ class AiLiveModeTest extends TestCase
         $this->assertSame('text', $content[1]['type']);
     }
 
-    public function test_a_payload_that_is_not_an_image_is_dropped_rather_than_sent(): void
+    public function test_openai_gets_the_photo_as_an_image_url_part(): void
     {
-        $t = FakeAnthropicTransport::replying(self::GOOD_EXPLAIN);
+        $t = FakeAiTransport::gpt(self::GOOD_EXPLAIN);
+        $this->live('openai', $t)->explain('', 'English', 'data:image/jpeg;base64,AAAA');
 
-        $this->live($t)->explain('AMLODIPINE 5MG', 'English', 'data:application/pdf;base64,AAAA');
+        $content = $t->lastBody()['messages'][1]['content'];
 
-        $content = $t->lastBody()['messages'][0]['content'];
+        $this->assertCount(2, $content);
+        $this->assertSame('text', $content[0]['type']);
+        $this->assertSame('image_url', $content[1]['type']);
+        $this->assertSame('data:image/jpeg;base64,AAAA', $content[1]['image_url']['url']);
+    }
 
-        $this->assertCount(1, $content);
+    #[DataProvider('providers')]
+    public function test_a_payload_that_is_not_an_image_is_dropped_rather_than_sent(string $provider): void
+    {
+        $t = $this->replying($provider, self::GOOD_EXPLAIN);
+        $this->live($provider, $t)->explain('AMLODIPINE 5MG', 'English', 'data:application/pdf;base64,AAAA');
+
+        $body = $t->lastBody();
+        $content = $provider === 'openai'
+            ? $body['messages'][1]['content']
+            : $body['messages'][0]['content'];
+
+        $this->assertCount(1, $content, 'A rejected request costs a patient their answer.');
         $this->assertSame('text', $content[0]['type']);
     }
 
-    public function test_a_live_answer_is_parsed_and_returned(): void
+    // ── The contract both owe ────────────────────────────────────────
+
+    #[DataProvider('providers')]
+    public function test_a_live_answer_is_parsed_and_returned(string $provider): void
     {
-        $result = $this->live(FakeAnthropicTransport::replying(self::GOOD_EXPLAIN))
+        $result = $this->live($provider, $this->replying($provider, self::GOOD_EXPLAIN))
             ->explain('AMLODIPINE 5MG', 'English');
 
         $this->assertSame('Amlodipine 5 mg', $result['medicineName']);
         $this->assertSame('high', $result['readingConfidence']);
     }
 
-    public function test_the_triage_gate_still_runs_before_any_request(): void
+    #[DataProvider('providers')]
+    public function test_the_triage_gate_still_runs_before_any_request(string $provider): void
     {
         // The whole point of the gate: a crisis is handled at zero latency and
         // is never subject to a model, or a network, being available.
-        $t = FakeAnthropicTransport::replying(self::GOOD_EXPLAIN);
+        $t = $this->replying($provider, self::GOOD_EXPLAIN);
 
-        $answer = $this->live($t)->ask('I cannot breathe', 'en', 'English');
+        $answer = $this->live($provider, $t)->ask('I cannot breathe', 'en', 'English');
 
         $this->assertTrue($answer['crisis']);
         $this->assertSame([], $t->sent, 'Triage must short-circuit before the model is called.');
     }
 
-    public function test_an_api_failure_degrades_instead_of_breaking_the_screen(): void
+    #[DataProvider('providers')]
+    public function test_a_rate_limit_degrades_instead_of_breaking_the_screen(string $provider): void
     {
-        $result = $this->live(FakeAnthropicTransport::failing(429, 'rate_limit_error'))
+        $result = $this->live($provider, FakeAiTransport::failing(429, 'rate_limit_error'))
             ->explain('AMLODIPINE 5MG', 'English');
 
-        // Falls back to a usable answer rather than throwing at a patient.
         $this->assertArrayHasKey('readingConfidence', $result);
         $this->assertArrayHasKey('askPharmacist', $result);
     }
 
-    public function test_a_server_error_degrades_too(): void
+    #[DataProvider('providers')]
+    public function test_a_server_error_degrades_too(string $provider): void
     {
-        $result = $this->live(FakeAnthropicTransport::failing(500))
+        $result = $this->live($provider, FakeAiTransport::failing(500))
             ->identify('white tablet', 'English');
 
         $this->assertContains($result['confidence'], ['high', 'medium', 'low', 'cannot_identify']);
     }
 
-    public function test_an_unparseable_body_degrades_too(): void
+    #[DataProvider('providers')]
+    public function test_an_unreachable_network_degrades_too(string $provider): void
     {
-        $result = $this->live(FakeAnthropicTransport::replyingRaw('not json'))
-            ->identify('white tablet', 'English');
+        // The venue wifi case. This is the one that actually happens on stage.
+        $result = $this->live($provider, FakeAiTransport::unreachable())
+            ->explain('AMLODIPINE 5MG', 'English');
 
-        $this->assertArrayHasKey('confidence', $result);
+        $this->assertArrayHasKey('readingConfidence', $result);
+    }
+
+    #[DataProvider('providers')]
+    public function test_an_unparseable_body_degrades_too(string $provider): void
+    {
+        $t = $provider === 'openai'
+            ? FakeAiTransport::gptRaw('not json')
+            : FakeAiTransport::claudeRaw('not json');
+
+        $result = $this->live($provider, $t)->identify('white tablet', 'English');
+
         $this->assertContains($result['confidence'], ['high', 'medium', 'low', 'cannot_identify']);
     }
 
-    public function test_a_response_missing_a_required_field_is_rejected(): void
+    #[DataProvider('providers')]
+    public function test_a_refusal_degrades_to_a_usable_answer(string $provider): void
+    {
+        $t = $provider === 'openai'
+            ? FakeAiTransport::gptRefusal()
+            : FakeAiTransport::claudeRefusal();
+
+        $result = $this->live($provider, $t)->explain('AMLODIPINE 5MG', 'English');
+
+        $this->assertArrayHasKey('readingConfidence', $result);
+        $this->assertArrayHasKey('askPharmacist', $result);
+    }
+
+    #[DataProvider('providers')]
+    public function test_a_response_missing_a_required_field_is_rejected(string $provider): void
     {
         // Everything a model returns is untrusted until it clears validate().
-        $service = $this->live(FakeAnthropicTransport::replying(['medicineName' => 'Amlodipine']));
+        $service = $this->live($provider, $this->replying($provider, ['medicineName' => 'Amlodipine']));
 
         $this->expectException(\RuntimeException::class);
         $service->explain('AMLODIPINE 5MG', 'English');
     }
 
-    public function test_the_key_is_never_written_into_a_rendered_page(): void
+    public function test_no_key_is_ever_written_into_a_rendered_page(): void
     {
         $this->live();
 
         foreach (glob(resource_path('views/**/*.blade.php')) as $view) {
-            $this->assertStringNotContainsString(
-                'services.anthropic.key',
-                (string) file_get_contents($view),
-                basename($view).' reads the API key. It must never reach a browser.',
-            );
+            $body = (string) file_get_contents($view);
+
+            foreach (['services.anthropic.key', 'services.openai.key'] as $secret) {
+                $this->assertStringNotContainsString(
+                    $secret,
+                    $body,
+                    basename($view).' reads an API key. It must never reach a browser.',
+                );
+            }
         }
     }
 }

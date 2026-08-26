@@ -16,7 +16,7 @@ class AiBoundaryTest extends TestCase
 {
     private function ai(): AiService
     {
-        config(['services.anthropic.mode' => 'mock']);
+        config(['services.ai.mode' => 'mock']);
         return app(AiService::class);
     }
 
@@ -99,7 +99,7 @@ class AiBoundaryTest extends TestCase
 
     public function test_mock_mode_needs_no_key(): void
     {
-        config(['services.anthropic.mode' => 'mock', 'services.anthropic.key' => null]);
+        config(['services.ai.mode' => 'mock', 'services.anthropic.key' => null, 'services.openai.key' => null]);
         $this->assertFalse(app(AiService::class)->isLive());
         $this->assertNotEmpty(app(AiService::class)->explain('test', 'English'));
     }

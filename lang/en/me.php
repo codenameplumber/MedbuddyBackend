@@ -106,6 +106,8 @@ return [
         'lead'            => 'Type what the label says, or take a photo of it.',
         'textLabel'       => 'What does the label or note say?',
         'textPlaceholder' => 'Type or paste the label text here…',
+        'photoLead'  => 'Point the camera at the label, the box, or the pharmacy note.',
+        'photoReady' => 'Photo ready',
         'photo'           => 'Take or choose a photo',
         'run'             => 'Explain this',
         'working'         => 'Reading…',
@@ -159,6 +161,13 @@ return [
     ],
 
     'common' => [
+        'speakApprox' => 'Read by a stand-in voice — this phone has no :lang voice, so some words will sound off.',
+        'takePhoto'   => 'Take a photo',
+        'choosePhoto' => 'Choose a photo',
+        'retakePhoto' => 'Use a different photo',
+        'removePhoto' => 'Remove photo',
+        'demoAnswer'  => 'Demo answer',
+        'demoAnswerNote' => 'No AI key is set, so this is a canned example in English. With a key the answer comes back in your own language.',
         'cancel'    => 'Cancel',
         'back'      => 'Back',
         'close'     => 'Close',

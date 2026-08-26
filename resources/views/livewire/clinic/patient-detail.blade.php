@@ -14,6 +14,19 @@
     <span class="badge">{{ $patient->condition }}</span>
     <span class="hint mono">{{ $patient->email }}</span>
     <span class="grow"></span>
+    {{--
+      What this patient sees. Only ever offered for the fabricated cohort, so
+      it is a demo affordance rather than impersonation of a real person.
+    --}}
+    @if (config('medbuddy.demo_signin') && str_ends_with((string) $patient->email, config('medbuddy.demo_domain')))
+      <form method="POST" action="{{ route('me.demo') }}" target="_blank">
+        @csrf
+        <input type="hidden" name="patient" value="{{ $patient->id }}">
+        <button class="btn btn-secondary btn-sm" type="submit">
+          <x-icon name="user" class="i-sm" /> Open patient view
+        </button>
+      </form>
+    @endif
     @can('update', $patient)
       <a class="btn btn-secondary btn-sm" href="{{ route('clinic.patient.edit', $patient) }}" wire:navigate>Edit details</a>
     @endcan

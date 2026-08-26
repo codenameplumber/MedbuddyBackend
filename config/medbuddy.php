@@ -31,5 +31,22 @@ return [
      */
     'languages' => ['en' => 'English', 'yo' => 'Yorùbá', 'ha' => 'Hausa', 'ig' => 'Igbo'],
 
+    /*
+     | One-click patient sign-in on /me/login, for demos.
+     |
+     | The patient app has no passwords — the link in the email is the
+     | credential — which makes it genuinely awkward to show someone. This
+     | lists the seeded cohort on the sign-in page and lets you in with one tap.
+     |
+     | It is guarded twice. Off unless MEDBUDDY_DEMO_SIGNIN is true, AND it
+     | only ever offers patients on the fabricated .test domain, so it cannot
+     | sign anyone in as a real patient even if it is left switched on by
+     | accident. `medbuddy:doctor` reports loudly when it is enabled.
+     */
+    'demo_signin' => (bool) env('MEDBUDDY_DEMO_SIGNIN', false),
+
+    /* The mailbox suffix that marks a record as fabricated demo data. */
+    'demo_domain' => '@patient.medbuddy.test',
+
     'symptoms' => ['fine', 'dizzy', 'rash', 'stomach', 'sleepy', 'swelling', 'other'],
 ];

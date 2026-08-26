@@ -224,6 +224,138 @@ class DesignParityTest extends TestCase
         }
     }
 
+    public function test_the_scan_screen_lets_a_patient_take_or_choose_a_photo(): void
+    {
+        /*
+         | It shipped as one file input carrying capture="environment", which
+         | on a phone opens the camera and removes the gallery entirely — so
+         | a patient who already had a photo of the label, or was sent one by
+         | a relative, could not use it.
+         */
+        $this->signIn();
+
+        $html = $this->get(route('me.scan'))->assertOk()->getContent();
+
+        $this->assertStringContainsString(__('me.common.takePhoto'), $html);
+        $this->assertStringContainsString(__('me.common.choosePhoto'), $html);
+
+        // One input asks for the camera; the other must not, or the OS never
+        // offers the library.
+        preg_match_all('/<input[^>]*type="file"[^>]*>/', $html, $inputs);
+
+        $this->assertGreaterThanOrEqual(2, count($inputs[0]));
+        $this->assertTrue(
+            collect($inputs[0])->contains(fn ($i) => str_contains($i, 'capture=')),
+            'One input should open the camera.',
+        );
+        $this->assertTrue(
+            collect($inputs[0])->contains(fn ($i) => ! str_contains($i, 'capture=')),
+            'One input must NOT set capture, or choosing an existing photo is impossible.',
+        );
+    }
+
+    public function test_an_ai_answer_can_be_read_aloud_in_the_patients_language(): void
+    {
+        // Half this audience finds listening easier than reading — which is
+        // the same problem as the label they could not read.
+        $this->signIn();
+        $this->prescribe();
+
+        Livewire::test(Me\Ask::class)
+            ->set('question', 'Can I take this with food?')
+            ->call('send')
+            ->assertSee('data-speak', false)
+            ->assertSee('data-lang="yo"', false);
+    }
+
+    public function test_read_aloud_always_has_a_voice_to_fall_back_to(): void
+    {
+        /*
+         | It must never refuse to read. Browsers ship voices for Yorùbá, Hausa
+         | and Igbo almost nowhere, so the player falls back to the closest
+         | sounding language it can find rather than staying silent — and the
+         | fallback order prefers five-vowel, syllable-timed languages over
+         | English, which reads these three badly.
+         */
+        $js = (string) file_get_contents(public_path('js/speak.js'));
+
+        foreach (['yo', 'ig', 'ha'] as $lang) {
+            $this->assertMatchesRegularExpression(
+                "/{$lang}: \[[^\]]*'es'[^\]]*\]/",
+                $js,
+                "The {$lang} fallback chain should reach for a five-vowel voice before English.",
+            );
+        }
+
+        // And the last resort is any voice at all, never nothing.
+        $this->assertStringContainsString('var any = voices()[0];', $js);
+        $this->assertStringNotContainsString('speakUnavailable', $js);
+    }
+
+    public function test_a_stand_in_voice_says_so(): void
+    {
+        // A patient is entitled to know before trusting how a dose was said.
+        $this->signIn();
+        $this->prescribe();
+
+        $html = Livewire::test(Me\Ask::class)
+            ->set('question', 'Can I take this with food?')
+            ->call('send')
+            ->html();
+
+        $this->assertStringContainsString('data-label-approx', $html);
+
+        // Laravel interpolates :name, not {name}. Getting that wrong shipped
+        // the literal placeholder to the patient.
+        $this->assertStringContainsString('Yorùbá voice', $html);
+        $this->assertStringNotContainsString('{lang}', $html);
+    }
+
+    public function test_the_read_aloud_button_is_never_hidden_behind_javascript(): void
+    {
+        /*
+         | It first shipped `hidden`, revealed only once JS had confirmed a
+         | voice. Browsers load their voice list asynchronously, so the common
+         | outcome was no button appearing at all — the feature looked broken
+         | rather than approximate. It now renders visible, and only a browser
+         | with no speech support at all takes it away.
+         */
+        $this->signIn();
+        $this->prescribe();
+
+        $html = Livewire::test(Me\Ask::class)
+            ->set('question', 'Can I take this with food?')
+            ->call('send')
+            ->html();
+
+        preg_match('/<button[^>]*data-speak-btn[^>]*>/', $html, $m);
+
+        $this->assertNotEmpty($m, 'The read-aloud button must be rendered.');
+        $this->assertStringNotContainsString('hidden', $m[0], 'It must not ship hidden.');
+
+        // And the text it reads must survive Livewire's DOM morphing, which
+        // is why it is a span rather than a <template>.
+        $this->assertStringContainsString('data-speak-text', $html);
+        $this->assertStringNotContainsString('<template data-speak-text', $html);
+    }
+
+    public function test_a_canned_answer_says_it_is_canned(): void
+    {
+        /*
+         | With no API key the answers are canned English. On a Yorùbá screen
+         | that reads as a bug unless the screen says why — so it does, rather
+         | than leaving a patient to conclude the app is broken.
+         */
+        config(['services.ai.mode' => 'mock']);
+        $this->signIn();
+        $this->prescribe();
+
+        Livewire::test(Me\Ask::class)
+            ->set('question', 'Can I take this with food?')
+            ->call('send')
+            ->assertSee(__('me.common.demoAnswer'));
+    }
+
     public function test_no_patient_screen_hardcodes_an_english_sentence(): void
     {
         /*

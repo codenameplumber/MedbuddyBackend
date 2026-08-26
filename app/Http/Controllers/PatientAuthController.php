@@ -13,7 +13,7 @@ class PatientAuthController extends Controller
 {
     public function show()
     {
-        return view('me.login');
+        return view('me.login', ['demoPatients' => self::demoPatients()]);
     }
 
     public function send(Request $request)
@@ -39,11 +39,67 @@ class PatientAuthController extends Controller
         return back()->with('sent', true);
     }
 
+    /**
+     * The seeded cohort, for the demo sign-in panel on /me/login.
+     *
+     * Empty unless the flag is on AND the patient is on the fabricated
+     * domain, which is what makes leaving the flag on survivable: there is
+     * nothing here to sign in as except invented people.
+     *
+     * @return \Illuminate\Support\Collection<int, Patient>
+     */
+    public static function demoPatients()
+    {
+        if (! config('medbuddy.demo_signin')) {
+            return collect();
+        }
+
+        $cohort = Patient::query()
+            ->where('email', 'like', '%'.config('medbuddy.demo_domain'))
+            ->whereHas('activePrescriptions')
+            ->orderBy('name')
+            ->get();
+
+        // A shortlist, not the whole cohort: 120 rows is a wall, and the point
+        // of the panel is to get someone into the app in one tap. Two per
+        // language keeps every translation reachable, which is the thing worth
+        // showing.
+        return $cohort
+            ->groupBy('lang')
+            ->flatMap(fn ($group) => $group->take(2))
+            ->sortBy('lang')
+            ->values();
+    }
+
+    /**
+     * One-click sign-in as a seeded patient.
+     *
+     * Deliberately a POST behind the same two guards as the list itself, so a
+     * link cannot be pasted anywhere and a real record can never be the
+     * target. Audited like every other way into a patient record.
+     */
+    public function demoSignIn(Request $request)
+    {
+        abort_unless(config('medbuddy.demo_signin'), 404);
+
+        $patient = Patient::findOrFail($request->integer('patient'));
+
+        abort_unless(
+            str_ends_with((string) $patient->email, config('medbuddy.demo_domain')),
+            403,
+            'Demo sign-in only works for the fabricated cohort.',
+        );
+
+        $this->startSessionFor($request, $patient);
+        Audit::record('patient.demo_signed_in', $patient);
+
+        return redirect()->route('me.today');
+    }
+
     /** Signed route. The signature IS the credential. */
     public function consume(Request $request, Patient $patient)
     {
-        $request->session()->regenerate();
-        $request->session()->put('patient_id', $patient->id);
+        $this->startSessionFor($request, $patient);
         Audit::record('patient.signed_in', $patient);
 
         return redirect()->route('me.today');
@@ -66,9 +122,30 @@ class PatientAuthController extends Controller
 
     public function logout(Request $request)
     {
-        $request->session()->forget('patient_id');
-        $request->session()->regenerate();
+        // invalidate(), not forget()+regenerate(): the second one rotates the
+        // session id but keeps every key in it, so anything the app stashed
+        // about this patient would still be sitting there for whoever signs
+        // in next on the same device. Phones get shared.
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return redirect()->route('me.login');
+    }
+
+    /**
+     * Begin a session as this patient, with nothing carried over.
+     *
+     * The bug this exists to prevent: session()->regenerate() rotates the
+     * session ID but preserves the data, so signing in as a second patient on
+     * the same browser inherited the first one's screen state — including the
+     * Ask thread, which is a record of what someone asked about their own
+     * medicines. invalidate() flushes it, and is the correct answer to session
+     * fixation either way.
+     */
+    private function startSessionFor(Request $request, Patient $patient): void
+    {
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        $request->session()->put('patient_id', $patient->id);
     }
 }

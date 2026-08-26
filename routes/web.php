@@ -32,6 +32,13 @@ Route::get('/me/login', [PatientAuthController::class, 'show'])->name('me.login'
 Route::post('/me/login', [PatientAuthController::class, 'send'])->name('me.login.send');
 Route::post('/me/logout', [PatientAuthController::class, 'logout'])->name('me.logout');
 
+/*
+ | One-click sign-in as a seeded patient, for demos. 404s unless
+ | MEDBUDDY_DEMO_SIGNIN is on, and 403s for anyone not on the fabricated
+ | domain — so it cannot reach a real record even if left enabled.
+ */
+Route::post('/me/demo-signin', [PatientAuthController::class, 'demoSignIn'])->name('me.demo');
+
 Route::middleware('patient')->prefix('me')->name('me.')->group(function () {
     Route::get('/',              Me\Today::class)->name('today');
     Route::get('/medicines',     Me\Medicines::class)->name('medicines');

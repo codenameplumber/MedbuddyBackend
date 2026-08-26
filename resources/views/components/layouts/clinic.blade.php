@@ -68,6 +68,11 @@
     <a class="nav-item {{ $current === 'clinic.settings' ? 'is-active' : '' }}" href="{{ route('clinic.settings') }}" wire:navigate>
       <x-icon name="lock" class="i-sm" /><span>Settings</span>
     </a>
+    {{-- The other half of the product. Staff had no way to find it from here. --}}
+    <a class="nav-item" href="{{ route('me.login') }}" target="_blank">
+      <x-icon name="heart" class="i-sm" /><span class="grow">Patient app</span>
+      <x-icon name="arrowR" class="i-sm" />
+    </a>
     <form method="POST" action="{{ route('logout') }}">@csrf
       <button class="nav-item" type="submit" style="width:100%;border:0;background:none;cursor:pointer;text-align:left">
         <x-icon name="arrowL" class="i-sm" /><span>Sign out</span>
@@ -104,7 +109,7 @@
     <span class="sep">·</span>
     <span>Mail: <strong>{{ config('mail.default') }}</strong></span>
     <span class="sep">·</span>
-    <span>AI: <strong>{{ config('services.anthropic.mode') }}</strong></span>
+    <span>AI: <strong>{{ config('services.ai.mode') }}</strong> · {{ config('services.ai.provider') }}</span>
     <span class="grow"></span>
     <span>&copy; {{ date('Y') }} MedBuddy</span>
   </footer>

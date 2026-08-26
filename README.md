@@ -1,7 +1,12 @@
 # MedBuddy — Laravel platform
 
+**Competition submission:** https://claude.ai/code/artifact/df8ae83b-243b-492d-90ce-8b91b9c1a7ff
+· [Demo access & logins](https://claude.ai/code/artifact/956cf05e-02a1-46b2-9486-f439c5b8b18f)
+· [Technical overview](https://claude.ai/code/artifact/e2bc7582-8b90-49c3-9dac-5015349e812c)
+· [Deploying to Laravel Cloud](DEPLOY.md)
+
 Medication adherence and health literacy, in the patient's own language.
-Laravel 13 · Livewire 4 · MySQL 9 · Claude (with a mock mode that needs no key).
+Laravel 13 · Livewire 4 · MySQL 9 · OpenAI, with Claude switchable behind the same interface (and a mock mode that needs no key).
 
 ## Run it
 
@@ -49,6 +54,95 @@ php artisan tinker --execute="echo URL::temporarySignedRoute(
 A signed link is bound to the host it was generated for, so `APP_URL` has to match the
 port you are serving on or every link returns 403.
 
+## The database
+
+MySQL, database `medbuddy`, on `127.0.0.1:3306` as `root` with no password.
+
+```bash
+php artisan migrate:fresh --seed     # rebuilds the whole cohort, deterministically
+```
+
+| Table | Rows | What is in it |
+|---|---:|---|
+| `patients` | 120 | Igbo 46 · Yorùbá 41 · Hausa 24 · English 9, across 10 long-term conditions |
+| `prescriptions` | 183 | Real regimens — TB triple therapy, ARVs, metformin twice daily |
+| `dose_events` | 10,487 | 60 days of history; evening doses missed more often, on purpose |
+| `reminders` | 1,281 | A week of delivery history: 1,281 sent → 1,095 opened → 797 answered |
+| `patient_reports` | 205 | 33 carry a voice note, clustered in the non-English cohort |
+| `consents` | 240 | Messaging and research recorded separately |
+| `audits` | 180 | A week of staff activity |
+| `users` | 12 | 2 admins · 3 physicians · 2 pharmacists · 5 nurses |
+
+> **If phpMyAdmin shows no `medbuddy` database, you are looking at the wrong server.**
+> WAMP ships two engines and runs both: **MySQL 9 on port 3306** (where this app lives)
+> and **MariaDB 11 on port 3307** (where it does not). phpMyAdmin often defaults to
+> MariaDB. Pick the MySQL server from the dropdown on the phpMyAdmin login page.
+>
+> To check from the command line without phpMyAdmin at all:
+> ```bash
+> php artisan tinker --execute="echo App\Models\Patient::count();"   # 120
+> ```
+
+## Logins
+
+Every staff account uses the password `password`. It is pre-filled on the sign-in form.
+Roles are enforced, not decorative — a nurse who opens a prescribing screen gets a 403,
+not a hidden button.
+
+| Email | Name | Role | May |
+|---|---|---|---|
+| `admin@ikejagh.ng` | K. Adesina | admin | Everything, plus staff and deleting a patient |
+| `m.sanni@ikejagh.ng` | M. Sanni | admin | Everything, plus staff and deleting a patient |
+| `a.adeyemi@ikejagh.ng` | Dr. A. Adeyemi | physician | Prescribe, enrol, manage consent |
+| `h.ibrahim@ikejagh.ng` | Dr. H. Ibrahim | physician | Prescribe, enrol, manage consent |
+| `c.nwachukwu@ikejagh.ng` | Dr. C. Nwachukwu | physician | Prescribe, enrol, manage consent |
+| `n.balogun@ikejagh.ng` | N. Balogun | pharmacist | Enrol and manage consent — **not** prescribe |
+| `s.okeke@ikejagh.ng` | S. Okeke | pharmacist | Enrol and manage consent — **not** prescribe |
+| `c.eze@ikejagh.ng` | C. Eze | nurse | Read, triage complaints, send reminders |
+| `b.lawal@ikejagh.ng` | B. Lawal | nurse | Read, triage complaints, send reminders |
+| `f.ogunleye@ikejagh.ng` | F. Ogunleye | nurse | Read, triage complaints, send reminders |
+| `r.danjuma@ikejagh.ng` | R. Danjuma | nurse | Read, triage complaints, send reminders |
+| `t.okonkwo@ikejagh.ng` | T. Okonkwo | nurse | Read, triage complaints, send reminders |
+
+### The patient app — one tap, no password
+
+**Open `/me/login` and tap a name.** The sign-in page lists the seeded cohort, two people
+per language, and one tap signs you in as them with their real dose history. Staff can also
+reach it from **Patient app** at the bottom of the clinic sidebar, or **Open patient view**
+on any patient's record.
+
+That panel is a demo affordance behind `MEDBUDDY_DEMO_SIGNIN`. It is a deliberate
+authentication bypass, so it is guarded twice: off unless the flag is set, and it only ever
+offers patients on the fabricated `@patient.medbuddy.test` domain — it refuses anything
+else, so it cannot reach a real record even if left on. `medbuddy:doctor` reports loudly
+while it is enabled. **Turn it off before a real patient is enrolled.**
+
+### How a real patient signs in
+
+The link in the email *is* the credential — scoped to one dose and expiring with its
+window. Enter an address at `/me/login` and read the link out of Mailtrap, or mint one
+directly:
+
+```bash
+php artisan tinker --execute="echo URL::temporarySignedRoute(
+  'me.auth', now()->addHour(), ['patient' => 3]);"
+```
+
+| id | Patient | Sign in with | Language | Condition | 7-day |
+|---:|---|---|---|---|---:|
+| 3 | Dupe Fashola | `dupe.fashola@patient.medbuddy.test` | Yorùbá | Hypertension | 100% |
+| 7 | Bisi Aderinto | `bisi.aderinto@patient.medbuddy.test` | Yorùbá | Heart failure | 100% |
+| 1 | Amina Garba | `amina.garba@patient.medbuddy.test` | Hausa | Epilepsy | 79% |
+| 2 | Zainab Dikko | `zainab.dikko@patient.medbuddy.test` | Hausa | Peptic ulcer | 86% |
+| 4 | Ifeoma Okafor | `ifeoma.okafor@patient.medbuddy.test` | Igbo | Asthma | 86% |
+| 18 | Oluchi Onyeka | `oluchi.onyeka@patient.medbuddy.test` | Igbo | HIV | 43% |
+| 9 | Tunde Ogunleye | `tunde.ogunleye@patient.medbuddy.test` | Yorùbá | Type 2 diabetes | 57% |
+| 16 | Ifeoma Umar | `ifeoma.umar@patient.medbuddy.test` | English | HIV | 79% |
+
+Open **Oluchi Onyeka** or **Tunde Ogunleye** first — they are why the console has a
+"Needs attention" list. A signed link is bound to the host it was minted for, so `APP_URL`
+must match the port you are actually serving on or every link returns 403.
+
 ## See the loop close
 
 This is the demo worth showing — every step is real, none of it is mocked.
@@ -60,11 +154,21 @@ This is the demo worth showing — every step is real, none of it is mocked.
 5. Answer it
 6. **Clinic → Overview** — the report is in the feed, on the patient record, and in the safety signals
 
-Mail goes over real SMTP by default, pointed at the Mailtrap sandbox. Paste
-`MAIL_USERNAME` and `MAIL_PASSWORD` from Mailtrap → Inboxes → SMTP Settings, then prove
-the whole path with a real send:
+Mail goes over real SMTP. Two providers are configured in `.env`, one active at a time —
+swapping is a comment, not a code change.
+
+- **Mailtrap sandbox (active).** Real SMTP, but every message is trapped in one inbox
+  rather than reaching a patient. Correct while the cohort is 120 fabricated people on a
+  `.test` domain.
+- **Resend (commented out).** For when mail should really leave the building. Two options
+  in `.env`: SMTP (`smtp.resend.com`, no extra package) or the API driver
+  (`composer require resend/resend-laravel`). The from-domain has to be verified in Resend
+  first — a `.test` address will be rejected.
+
+Prove whichever is active with a real send:
 
 ```bash
+php artisan config:clear
 php artisan medbuddy:mail-test you@example.com
 ```
 
@@ -123,24 +227,39 @@ That is why email-only is a simplification rather than technical debt.
 
 ## AI
 
-`MEDBUDDY_AI_MODE=mock` (default) returns canned responses — no key, no network, every screen
-demoable, and the edge cases (low confidence, refusal, cannot-identify) reachable on demand.
+**OpenAI is the active provider.** Claude stays wired behind the same
+`App\Services\Ai\Provider` interface, so switching is one env var — no screen, and no test
+of a screen, knows which one answered. `AiService` remains the only class in the codebase
+that talks to a model.
 
-Set `ANTHROPIC_API_KEY` and `MEDBUDDY_AI_MODE=live` for real calls. The key lives in `.env`
-and never reaches a browser — the single biggest security fix over the front-end-only
-prototype, and `AiLiveModeTest` asserts no Blade view can read it.
+```ini
+MEDBUDDY_AI_PROVIDER=openai      # openai | anthropic
+MEDBUDDY_AI_MODE=live            # mock | live
 
-```
-MEDBUDDY_AI_MODE=live
-ANTHROPIC_API_KEY=sk-ant-...
+OPENAI_API_KEY=sk-...            # GPT, via openai-php/client
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_MAX_TOKENS=1600
+
+ANTHROPIC_API_KEY=               # Claude, via anthropic-ai/sdk — not currently selected
 ANTHROPIC_MODEL=claude-opus-5
-ANTHROPIC_EFFORT=medium        # low | medium | high | xhigh | max
 ```
 
-`AiService` is the only class that talks to a model. It calls Claude through the official
-`anthropic-ai/sdk` with structured outputs, so the response shape is guaranteed rather than
-hoped for, and every failure — no key, rate limit, refusal, unparseable body — degrades to
-a canned answer instead of showing a patient an error.
+Paste `OPENAI_API_KEY`, run `php artisan config:clear`, and the five AI screens go live.
+Both providers use structured outputs, so the response shape is guaranteed rather than hoped
+for — which is why the UI can rely on a confidence field existing at all.
+
+`MEDBUDDY_AI_MODE=mock` (or live mode with no key for the selected provider) returns canned
+responses — no key, no network, every screen demoable, and the edge cases (low confidence,
+refusal, cannot-identify) reachable on demand. Every failure path — no key, rate limit,
+refusal, unreachable network, unparseable body — degrades to that same canned answer rather
+than showing a patient an error.
+
+The key lives in `.env` and never reaches a browser; `AiLiveModeTest` asserts that no Blade
+view can read either one. Check which is live with:
+
+```bash
+php artisan medbuddy:doctor      # names the provider, the model, and whether a key is present
+```
 
 Live mode sends patient-adjacent text to servers outside Nigeria. Under the NDPA that is a
 question to answer before real patients, not a technical detail.

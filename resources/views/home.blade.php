@@ -315,7 +315,7 @@
     <a href="{{ route('deck.pitch') }}">Pitch deck</a>
     <a href="{{ route('deck.technical') }}">Technical deck</a>
     <a href="/tools/diacritics.html">Diacritic check</a>
-    <span>AI: <strong>{{ config('services.anthropic.mode') }}</strong></span>
+    <span>AI: <strong>{{ config('services.ai.mode') }}</strong> · {{ config('services.ai.provider') }}</span>
     <span>&copy; {{ date('Y') }}</span>
   </div>
 </footer>

@@ -35,6 +35,12 @@
              style="{{ $m['role'] === 'me' ? 'margin-left:15%;background:var(--surface-2)' : 'margin-right:8%' }}">
           <div class="label-body">
             <p style="{{ $m['role'] === 'ai' ? 'font-size:var(--step-1);line-height:1.65' : '' }}">{{ $m['text'] }}</p>
+
+            @if ($m['role'] === 'ai')
+              {{-- Read aloud. Half this audience finds listening easier than reading. --}}
+              <x-speak :text="$m['text']" :lang="$lang" />
+            @endif
+
             @if ($m['note'])
               <div class="band band-caution" style="border-radius:var(--radius);margin-top:var(--s3)">
                 <x-icon name="alert" class="band-icon" />
@@ -66,9 +72,19 @@
       @endif
     </form>
 
-    <p class="hint" style="margin-top:var(--s5)">
-      {{ __('me.common.aiNote') }}
-      @unless ($live) <span class="badge badge-info">{{ __('me.settings.aiMock') }}</span> @endunless
-    </p>
+    @unless ($live)
+      {{-- A canned English answer on a Yorùbá screen reads as a bug unless the
+           screen says why. It is not a bug; it is what running with no key
+           looks like, and it is better than an error. --}}
+      <div class="band band-info" style="border-radius:var(--radius);margin-top:var(--s5)">
+        <x-icon name="info" class="band-icon" />
+        <div>
+          <span class="band-title">{{ __('me.common.demoAnswer') }}</span>
+          {{ __('me.common.demoAnswerNote') }}
+        </div>
+      </div>
+    @endunless
+
+    <p class="hint" style="margin-top:var(--s5)">{{ __('me.common.aiNote') }}</p>
   @endif
 </div>
