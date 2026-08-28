@@ -124,8 +124,22 @@
 @endif
 
 @livewireScripts
-<script>
-document.getElementById('side-toggle')?.addEventListener('click', function () {
+
+{{--
+  data-navigate-once, and a guard inside.
+
+  Livewire re-executes inline <script> on every wire:navigate, so this block
+  used to add another 'toast' listener each time you moved between pages.
+  Approve something after three navigations and you got three toasts. The
+  same stacking hit the theme toggle and the sidebar button.
+--}}
+<script data-navigate-once>
+if (!window.__medbuddyShell) {
+  window.__medbuddyShell = true;
+
+// Delegated, so it survives Livewire replacing the button element itself.
+document.addEventListener('click', function (e) {
+  if (!e.target.closest('#side-toggle')) return;
   document.getElementById('sidebar')?.classList.toggle('is-open');
 });
 
@@ -159,13 +173,23 @@ document.getElementById('side-toggle')?.addEventListener('click', function () {
 window.addEventListener('toast', function (e) {
   var host = document.getElementById('toasts');
   if (!host) return;
+
+  // Livewire can deliver the same dispatch to more than one listening
+  // component, so drop an identical message that lands within a second.
+  var message = String(e.detail.message || '');
+  if (window.__lastToast === message && Date.now() - window.__lastToastAt < 1000) return;
+  window.__lastToast = message;
+  window.__lastToastAt = Date.now();
+
   var el = document.createElement('div');
   el.className = 'toast toast-' + (e.detail.tone || 'info');
-  el.textContent = e.detail.message;
+  el.textContent = message;
   host.appendChild(el);
   requestAnimationFrame(function () { el.classList.add('is-in'); });
   setTimeout(function () { el.classList.remove('is-in'); setTimeout(function () { el.remove(); }, 400); }, 3600);
 });
+
+}
 </script>
 </body>
 </html>

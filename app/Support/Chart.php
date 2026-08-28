@@ -108,7 +108,7 @@ class Chart
 
         $last = $values[$count - 1];
 
-        return '<svg class="ch ch-'.self::e($tone).'" viewBox="0 0 '.$W.' '.$H.'" preserveAspectRatio="none" role="img"'
+        return '<svg class="ch ch-'.self::e($tone).'" viewBox="0 0 '.$W.' '.$H.'" role="img"'
             .' aria-label="'.self::e($title).': from '.self::e($values[0]).' to '.self::e($last).' over '.$count.' points">'
             .'<defs><linearGradient id="'.$gid.'" x1="0" y1="0" x2="0" y2="1">'
             .'<stop offset="0%" class="ch-stop-a"/><stop offset="100%" class="ch-stop-b"/></linearGradient></defs>'
@@ -120,16 +120,92 @@ class Chart
     }
 
     /** @param array<int, array{label:string, value:int|float, tone?:string}> $rows */
+    /**
+     * How to draw a category axis without the labels colliding.
+     *
+     * The old charts drew every label horizontally, centred on its bar, inside
+     * an SVG stretched by preserveAspectRatio="none". On the safety-signals
+     * page that is 39 labels sharing 706 units — 18 units each, for names up
+     * to 37 characters — so they overlapped into a grey smear, and the stretch
+     * distorted the glyphs on top of it.
+     *
+     * This decides three things instead: rotate or not, label every Nth bar,
+     * and how many characters actually fit. Anything trimmed is still on the
+     * bar's <title>, so hovering gives the full name.
+     *
+     * @param  list<string>  $labels
+     * @return array{rotate: bool, step: int, chars: int, pad: int}
+     */
+    private static function labelPlan(array $labels, float $bw): array
+    {
+        // IBM Plex Mono at 11px, measured: ~6.6 units per character.
+        $charW = 6.6;
+        $longest = max(1, max(array_map('mb_strlen', $labels ?: [''])));
+        $fitsFlat = (int) floor($bw / $charW);
+
+        // Everything fits lying flat. Nothing to be clever about.
+        if ($fitsFlat >= 4 && $longest <= $fitsFlat) {
+            return ['rotate' => false, 'step' => 1, 'chars' => $fitsFlat, 'pad' => 34];
+        }
+
+        // Rotated 40°, a character advances ~cos(40°) horizontally and
+        // ~sin(40°) vertically, so a diagonal label needs less width and more
+        // height than a flat one.
+        $advance = $charW * 0.766;
+        $rise    = $charW * 0.643;
+
+        $step  = max(1, (int) ceil(14 * $advance / max($bw, 1)));
+        $chars = max(6, min(20, (int) floor($step * $bw / $advance)));
+        $chars = min($chars, $longest);
+
+        return [
+            'rotate' => true,
+            'step'   => $step,
+            'chars'  => $chars,
+            'pad'    => 30 + (int) ceil($chars * $rise),
+        ];
+    }
+
+    /** One category label, flat or on the diagonal. */
+    private static function categoryLabel(string $text, float $x, float $baseline, array $plan): string
+    {
+        $shown = mb_strlen($text) > $plan['chars']
+            ? mb_substr($text, 0, max(1, $plan['chars'] - 1)).'…'
+            : $text;
+
+        if (! $plan['rotate']) {
+            return '<text class="ch-tick" x="'.self::n($x).'" y="'.self::n($baseline)
+                .'" text-anchor="middle">'.self::e($shown).'</text>';
+        }
+
+        return '<text class="ch-tick" x="'.self::n($x).'" y="'.self::n($baseline)
+            .'" text-anchor="end" transform="rotate(-40 '.self::n($x).' '.self::n($baseline).')">'
+            .self::e($shown).'</text>';
+    }
+
     public static function bars(array $rows, array $o = []): string
     {
         if (empty($rows)) {
             return '<p class="hint">No data yet.</p>';
         }
 
-        $H = $o['height'] ?? 200; $W = 760; $padL = 42; $padR = 12; $padT = 14; $padB = 34;
+        // A hard cap, stated rather than silent. Beyond this the bars are
+        // thinner than the gap between them and the chart stops being one.
+        $cap = (int) ($o['maxBars'] ?? 16);
+        $dropped = max(0, count($rows) - $cap);
+        if ($dropped > 0) {
+            $rows = array_slice($rows, 0, $cap);
+        }
+
+        $W = 760; $padL = 42; $padR = 12; $padT = 14;
         $unit = $o['unit'] ?? '';
         $max = $o['max'] ?? max(array_map(fn ($r) => $r['value'], $rows)) ?: 1;
         $bw = ($W - $padL - $padR) / count($rows);
+
+        $plan = self::labelPlan(array_map(fn ($r) => (string) $r['label'], $rows), $bw);
+        $padB = $plan['pad'];
+        $H = ($o['height'] ?? 200) + max(0, $padB - 34);
+
         $y = fn ($v) => $padT + ($H - $padT - $padB) * (1 - $v / $max);
 
         $grid = '';
@@ -150,14 +226,23 @@ class Chart
 
             $body .= '<rect class="ch-bar'.$tone.'" x="'.self::n($bx).'" y="'.self::n($y($r['value']))
                   .'" width="'.self::n($w).'" height="'.self::n($h).'" rx="3">'
-                  .'<title>'.self::e($r['label']).': '.self::e($r['value']).self::e($unit).'</title></rect>'
-                  .'<text class="ch-tick" x="'.self::n($bx + $w / 2).'" y="'.($H - 16).'" text-anchor="middle">'
-                  .self::e($r['label']).'</text>';
+                  .'<title>'.self::e($r['label']).': '.self::e($r['value']).self::e($unit).'</title></rect>';
+
+            // Every Nth label when they will not all fit. The full name stays
+            // on the <title> above, so nothing is actually lost.
+            if ($i % $plan['step'] === 0) {
+                $body .= self::categoryLabel((string) $r['label'], $bx + $w / 2, $H - $padB + 14, $plan);
+            }
 
             $aria[] = $r['label'].' '.$r['value'].$unit;
         }
 
-        return '<svg class="ch" viewBox="0 0 '.$W.' '.$H.'" preserveAspectRatio="none" role="img" aria-label="'
+        if ($dropped > 0) {
+            $body .= '<text class="ch-tick" x="'.($W - $padR).'" y="'.($padT + 2)
+                  .'" text-anchor="end">+'.$dropped.' more not shown</text>';
+        }
+
+        return '<svg class="ch" viewBox="0 0 '.$W.' '.self::n($H).'" role="img" aria-label="'
             .self::e(($o['title'] ?? 'Distribution').': '.implode(', ', $aria)).'">'.$grid.$body.'</svg>';
     }
 
@@ -167,9 +252,20 @@ class Chart
             return '<p class="hint">No data yet.</p>';
         }
 
-        $H = $o['height'] ?? 200; $W = 760; $padL = 12; $padR = 12; $padT = 12; $padB = 30;
+        $cap = (int) ($o['maxBars'] ?? 16);
+        $dropped = max(0, count($rows) - $cap);
+        if ($dropped > 0) {
+            $rows = array_slice($rows, 0, $cap);
+        }
+
+        $W = 760; $padL = 12; $padR = 12; $padT = 12;
         $max = max(array_map(fn ($r) => array_sum(array_column($r['parts'], 'value')), $rows)) ?: 1;
         $bw = ($W - $padL - $padR) / count($rows);
+
+        $plan = self::labelPlan(array_map(fn ($r) => (string) $r['label'], $rows), $bw);
+        $padB = $plan['pad'];
+        $H = ($o['height'] ?? 200) + max(0, $padB - 30);
+
         $scale = fn ($v) => ($v / $max) * ($H - $padT - $padB);
 
         $body = '';
@@ -186,11 +282,18 @@ class Chart
                       .'" width="'.self::n($w).'" height="'.self::n($h).'" rx="2">'
                       .'<title>'.self::e($r['label']).': '.self::e($p['value']).'</title></rect>';
             }
-            $body .= '<text class="ch-tick" x="'.self::n($bx + $w / 2).'" y="'.($H - 10).'" text-anchor="middle">'
-                  .self::e($r['label']).'</text>';
+
+            if ($i % $plan['step'] === 0) {
+                $body .= self::categoryLabel((string) $r['label'], $bx + $w / 2, $H - $padB + 14, $plan);
+            }
         }
 
-        return '<svg class="ch" viewBox="0 0 '.$W.' '.$H.'" preserveAspectRatio="none" role="img" aria-label="'
+        if ($dropped > 0) {
+            $body .= '<text class="ch-tick" x="'.($W - $padR).'" y="'.($padT + 2)
+                  .'" text-anchor="end">+'.$dropped.' more not shown</text>';
+        }
+
+        return '<svg class="ch" viewBox="0 0 '.$W.' '.self::n($H).'" role="img" aria-label="'
             .self::e($o['title'] ?? 'Breakdown').'">'.$body.'</svg>';
     }
 

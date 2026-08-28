@@ -105,13 +105,45 @@ MEDBUDDY_AI_MODE=live
 OPENAI_API_KEY=sk-...
 OPENAI_MODEL=gpt-4o-mini
 
-MAIL_MAILER=smtp                   # Resend, once the domain is verified
-MAIL_HOST=smtp.resend.com
-MAIL_PORT=587
-MAIL_USERNAME=resend
-MAIL_PASSWORD=re_...
-MAIL_FROM_ADDRESS=reminders@your-verified-domain
+MAIL_MAILER=smtp                   # Mailtrap — see the note below
+MAIL_HOST=sandbox.smtp.mailtrap.io
+MAIL_PORT=2525
+MAIL_USERNAME=...
+MAIL_PASSWORD=...
+MAIL_FROM_ADDRESS=reminders@medbuddy.test
 ```
+
+### Mail, with no domain of your own
+
+A Laravel Cloud staging URL (`your-app.laravel.cloud`) **cannot be verified with an
+email provider** — you do not control its DNS, so there are no records to add. That rules
+out sending as yourself from it.
+
+That leaves two honest options:
+
+| | Works for | Does not |
+|---|---|---|
+| **Mailtrap sandbox** *(what this app ships with)* | Captures a message to **any** recipient, so all 120 seeded reminders land in one inbox you can open and read | Nothing leaves Mailtrap — no real person ever receives anything |
+| **Resend** | Real delivery to real inboxes | Needs a verified domain. Without one it sends **only to the address that owns the Resend account** |
+
+For a demo or a staging environment, **Mailtrap is the right answer, not a compromise.**
+Every seeded patient is on `@patient.medbuddy.test`, an address that cannot receive mail
+anywhere on earth — so "real delivery" is meaningless for this cohort, while a single
+inbox holding every reminder in four languages is exactly what you want to show someone.
+
+Tested against the Resend shared sender, not assumed:
+
+```
+michaelcharsac@gmail.com            OK    (the account owner)
+dupe.fashola@patient.medbuddy.test  FAIL  "You can only send testing emails
+                                           to your own email address"
+someone.else@example.com            FAIL  "Invalid `to` field"
+```
+
+All 120 reminders would fail. **Before a real pilot**, buy any cheap domain — it does not
+have to be the one serving the app — verify it at <https://resend.com/domains>, then
+uncomment the Resend block in `.env`. The driver (`resend/resend-laravel`) is already
+installed and the key is already on file, so it is three lines and a `config:clear`.
 
 `APP_URL` is the one people get wrong. Every reminder link and every patient sign-in link
 is a signed URL bound to that host — if it disagrees with the domain actually serving the

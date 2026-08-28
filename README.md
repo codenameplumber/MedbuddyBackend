@@ -1,6 +1,9 @@
 # MedBuddy — Laravel platform
 
-**Competition submission:** https://claude.ai/code/artifact/df8ae83b-243b-492d-90ce-8b91b9c1a7ff
+**Competition submission (PDF):** [`MedBuddy-Submission.pdf`](MedBuddy-Submission.pdf) — 9 pages, all eight required sections.
+Regenerate it with `php artisan medbuddy:submission` after the numbers change.
+
+**Same thing on the web:** https://claude.ai/code/artifact/df8ae83b-243b-492d-90ce-8b91b9c1a7ff
 · [Demo access & logins](https://claude.ai/code/artifact/956cf05e-02a1-46b2-9486-f439c5b8b18f)
 · [Technical overview](https://claude.ai/code/artifact/e2bc7582-8b90-49c3-9dac-5015349e812c)
 · [Deploying to Laravel Cloud](DEPLOY.md)

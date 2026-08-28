@@ -54,8 +54,23 @@
 .ch-swatch.is-neutral { background: var(--neutral-line); }
 
 /* ── Heat strip ──────────────────────────────────────────────────── */
-.heat { display: flex; gap: var(--s2); }
-.heat-cell { flex: 1; display: flex; flex-direction: column; align-items: center; gap: var(--s2); min-width: 0; }
+.heat {
+  display: flex;
+  gap: var(--s2);
+  overflow-x: auto;
+  padding-bottom: var(--s1);
+}
+/* A cell may shrink, but not below the point where its label is unreadable.
+   Past that the strip scrolls sideways instead of crushing every label into
+   its neighbour. */
+.heat-cell {
+  flex: 1 1 0;
+  min-width: 4.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s2);
+}
 .heat-box {
   width: 100%; height: 46px; border-radius: var(--radius-s);
   background: color-mix(in srgb, var(--accent) calc(var(--v) * 100%), var(--neutral-bg));
@@ -64,7 +79,17 @@
 .heat-box.is-safe    { background: color-mix(in srgb, var(--safe)    calc(var(--v) * 100%), var(--neutral-bg)); }
 .heat-box.is-alert   { background: color-mix(in srgb, var(--alert)   calc(var(--v) * 100%), var(--neutral-bg)); }
 .heat-box.is-caution { background: color-mix(in srgb, var(--caution) calc(var(--v) * 100%), var(--neutral-bg)); }
-.heat-label { font-size: 11px; color: var(--ink-3); font-family: var(--font-mono); }
+.heat-label {
+  font-size: 11px;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  /* The label used to overflow its cell and sit on top of the next one. */
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+}
 
 /* ── Chart card ──────────────────────────────────────────────────── */
 .chart-card {
